@@ -1,0 +1,25 @@
+#!/bin/sh
+
+module="ndd2p6"
+sourcedir="/home/chris/programs/nudaq_driver/2.6/"
+dev3="nudaq_dmaread_special"
+group="users"
+
+# do the insmod thing
+/sbin/insmod $sourcedir$module.ko || exit 1
+
+# remove stale device files
+rm -f /dev/ioboards/nudaq*
+
+# allow for dynamical device major allocation an dextract major
+major=$(awk "\$2==\"$module\"  {print \$1}" /proc/devices)
+
+# create device file(s)
+mkdir -p /dev/ioboards
+mknod /dev/ioboards/${dev3} c $major 3
+
+# set permission and group (should be more secure..)
+chgrp $group /dev/ioboards/${dev3}
+chmod 664 /dev/ioboards/${dev3}
+
+

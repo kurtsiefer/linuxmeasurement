@@ -1,0 +1,13 @@
+status of this doc: 21.9.06 chk
+
+This is a directory which contains the nudaq driver in a version for a 2.6
+kernel. It seems to work with a co16 program up to full card bandwidth.
+
+The driver should work with dynamically allocated major device numbers, and
+the loader script should create the relevant device file, while the unloader
+script removes the device files and unloads the module.
+
+The loading framework is still a bit rudimentary....the load/unload routines
+are only intended for manual use for debugging. Plesae use the "nudaqcard"
+framework in one directory above to insert a generic module.
+

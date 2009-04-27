@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# unloading script for removing a module and the corresponing devices
+
+module="ndd2p6"
+dev3="nudaq_dmaread_special"
+
+# do rmmod
+rmmod $module
+
+# remove device files
+rm -f /dev/ioboards/nudaq*

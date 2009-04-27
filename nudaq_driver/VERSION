@@ -1,0 +1,19 @@
+26. Feb 2008
+
+This device driver is starting to get problematic in its way it shares direct
+DMA writable memory pages with user space programs using the mmap method. I
+saw problems arising with kernels used in suse releases >10.0. Up to Suse
+10.0 (kernel version 2.6.??) it works fine.
+
+Use with care in newer versions, system crashes after a few hours of usage
+have been seen.
+
+Origin of the problem seems to be a revamp of the page handling section in the
+kernel memory management, I had to abuse privileged code manipulating
+individual page entries in multipage clusters to prevent swapping following
+the nopage scenario described in the kernel driver book by alessandro rubini
+
+christian kursiefer
+
+IRQ_request parameters and irq handler parameters updated. Still not clear how
+stable code works with 2.6 kernel

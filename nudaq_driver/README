@@ -1,0 +1,32 @@
+This directory structure should contain the driver for a nudaq PCI7200 card
+which is compatible both with a 2.4 kernel and a 2.6 kernel. It should compile
+a driver, and install a loader script in the traditional (i.e., non-hotplug)
+way via an entry in the /etc/init.d startup directory.
+
+
+Files:
+README:  This file
+Makefile:  compiles/installs a loader for the respective kernel version
+nudaqcard.loadersource: skeleton to create a loader file to be copied
+           into the /etc/init.d tree, which then loads the driver at the
+           system startup. In order to activate the loader, it has to be
+	   marked in the runlevel editor.
+2.4/ndd2.4-3.c: kernel version 2.4 driver
+2.4/makefile
+2.6/ndd2p6.c: kernel verision 2.6 driver
+2.6/makefile
+
+Compilation:
+The driver is compiled from this directiry with
+
+make clean (if necessary)
+make all
+
+Installation:
+
+(as root): make install
+
+Then, the runlevel editor can be used to mark the "nudaqcard" loader as active
+e.g. in runlevel 5, and started from there as well.
+
+ 
