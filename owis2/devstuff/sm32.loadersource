@@ -1,0 +1,99 @@
+#! /bin/bash
+#
+# script to insert the modules for the nudaq card for various OS levels
+# and to create device file entries if necessary
+#
+# 7.11.2006,  Christian Kurtsiefer, phyck@nus.edu.sg
+# 12.3.07  attempt to make it loading in the correct sequence.
+#
+# standard location: /etc/init.d/
+# source path form modules may have to be adapted
+#
+
+# attempt to make it a LSB compliant service control script;
+# see http://www.linuxbase.org/spec/
+
+### BEGIN INIT INFO
+# Provides: sm32
+# Required-Start:
+# Should-Start: resmgr
+# Required-Stop:
+# Should-Stop: resmgr
+# Default-Start:  3 5
+# Default-Stop: 0 1 2 4 6
+# Short-Description: Owis Sm32 stepper motor card driver
+# Description: Device driver for the OWIS SM32 stepper motor
+#	 driver card. Should work with data more than one driver
+#        card acquisition card, but this was not tested. Generates
+#        also the appropriate device files.
+### END INIT INFO
+
+
+
+# . /etc/rc.status
+osversion=$(uname -r  |sed  "s/\([0-9].[0-9]\).*/\\1/")
+
+# new thing, gets replaced by a makefile
+iodriverpath=DRIVERPATH/$osversion
+
+dev1="stepper3"
+dev1old="stepper3"
+group="users"
+
+module="sm32_kmodule"
+if test $osversion == "2.4";
+    then driver=$module".o"; 
+else driver=$module".ko"
+fi
+
+return=$rc_done
+
+case "$1" in
+     start)
+	echo "inserting data translation sm32 card driver module ($driver)..."
+	insmod $iodriverpath/$driver || return=$rc_failed
+	if test $return == $rc_done;
+	    then
+# create directories
+	    mkdir -p /dev/ioboards
+	    
+# remove stale device files
+	    rm -f /dev/ioboards/stepper*
+	
+	    major=$(awk "\$2~\"$module\"  {print \$1}" /proc/devices)
+	    echo "sm32 driver claims following major devices:"
+	    echo $major
+	    cardindex=0 
+	    for elm in $major
+	      do echo "creating device ${dev1}_$cardindex for major $elm"
+# create  file entries
+	      mknod /dev/ioboards/${dev1}_${cardindex} c $elm 3
+	      
+	      cardindex=$(($cardindex+1))
+	    done
+	    echo "make compatibility link from /dev/ioboards/${dev1}_0 to /dev/ioboards/${dev1old}"
+	    ln -s /dev/ioboards/${dev1}_0 /dev/ioboards/${dev1old}
+	    
+# set permission and group (should be more secure..)
+	    chgrp $group /dev/ioboards/${dev1}*
+	    chmod 660 /dev/ioboards/${dev1}*
+	fi;   
+	echo -e "$return"
+	;;
+    stop)
+	echo "removing nudaq sm32 module..."
+	rmmod $module || return=$rc_failed
+	rm -f /dev/ioboards/${dev1}_*
+	rm -f /dev/ioboards/${dev1old}
+	echo -e "$return"
+	;;
+    restart|reload)
+	$0 stop && $0 start || return=$rc_failed
+	;;
+    *)
+        echo "Usage: $0 {start|stop}"
+	exit 1
+esac
+
+test "$return" = "$rc_done" || exit 1
+exit 0

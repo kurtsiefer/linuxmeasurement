@@ -1,0 +1,38 @@
+This is a unified driver/applications directory.
+
+Drivers are contained in the OS-version specific directories (2.4 or 2.6),
+and a few applications are in the apps directory. The devstuff holds a loader
+script.
+
+How to make everything:
+Say "make" in this directory, and it compiles driver, apps and a loader
+script, which can be (as su) installed via make install.
+
+The loader script must be activated with a runlevel editor.
+
+
+
+files in 2.4 directory:
+
+
+sm32_kmodule.c	   source code of the device driver.
+sm32_2.h	   header file containing all the definitions you need
+		   talk to the driver with ioctl() commands
+sm32_kmodule.o	   the compiled driver; can be manually inserted with insmod,
+		   but see below for scripted insertion
+
+files in the 2.6 directory:
+sm32_kmodule.c	   source code
+sm32_2.h	   extended version of the header file; contains a few more
+		   ioctls.
+
+applications:
+
+stepmotor2.c:	   small program to count events with this card. 
+
+Current state of the drivers:
+2.4:    version which runs with a fixed major address, and can only handle
+	one card
+
+2.6:    dynamical major number, can handle up to 5 cards. Device files are
+	automatically created and removed with card.
