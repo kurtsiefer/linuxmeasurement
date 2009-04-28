@@ -1,0 +1,39 @@
+This is a unified driver/applications directory.
+
+Drivers are contained in the OS-version specific directories (2.4 or 2.6),
+and a few applications are in the apps directory. The devstuff holds a loader
+script. 
+
+How to make everything:
+Say "make" in this directory, and it compiles driver, apps and a loader
+script, which can be (as Su) installed via make install.
+
+The loader script must be activated with a runlevel editor.
+
+
+
+files in 2.4 directory:
+
+dt302.c	   source code of the device driver.
+dt302.h    header file containing all the definitions you need to
+	   talk to the driver with ioctl() commands
+dt302.o    the compiled driver; insert it with insmod; see below
+
+files in the 2.6 directory:
+dt302.c   source code
+dt302.h   extended version of the header file; contains a few more
+	  ioctls.
+
+applications:
+
+dacout_dt302:   small toy program to put an analog voltage onto one of 
+                the two analog output ports.
+
+readsinglechan_dt302:  small program to read in the value of one of
+                       the eight analog differential inputs.
+
+dt302_counter:    program to count pulses for a given time
+                  interval. see source code for usage.
+
+history:
+  modified pci_enable position to get correct PCI resources 5.9.07chk
