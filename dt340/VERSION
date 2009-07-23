@@ -1,10 +1,12 @@
-state of this document 2.4.2008
+state of this document 23.7.2009
+
+as of 23.7.2009: Added digital output application
+
+as of 17.4.2009 fixed interrupt problem with newer kernel: SA_INTERRPUT and
+SA_SHIRQ got changed to new names IRQF_DISABLED and IRQF_SHARED
 
 Added the counterscript_dt340 to the apps directory. 2.4.08chk
 
 as of 29.2.2008:
 seems to work without problems on a recent xubuntu version, and on serveral
 SuSE versions. Last modification was on 05Sept2007 for the 2.6 kernel version
-
-as of 17.4.2009 fixed interrupt problem with newer kernel: SA_INTERRPUT and
-SA_SHIRQ got changed to new names IRQF_DISABLED and IRQF_SHARED

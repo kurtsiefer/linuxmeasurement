@@ -25,10 +25,15 @@ dt340.c   source code
 dt340.h   extended version of the header file; contains a few more
 	  ioctls.
 
-applications:
+Applications:
 
-counter2:   small program to count events with this card. 
+counter2:            small program to count events with this card during a 
+		     definable integration time. This needs a particular
+		     connection of various gate lines and counter
+		     outputs. Need to write documentaion on his. 
 counterscript_dt340: displays count rates for the first four inputs
+digiout_dt340:       small program to send something to the digital outputs
+		     for a short time.
 
 
 Current state of the drivers:
@@ -41,4 +46,7 @@ Current state of the drivers:
 Change history:
       - modified PCI registration to get correct IRQ number; this was
         a problem, with a SuSE 10.0 distro on one of the machines. 5.9.07chk
-      - added counterscript_dt340 to apps directory, no more addrows. 2.4.08chk
+      - added counterscript_dt340 to apps directory, no more
+      addrows. 2.4.08chk
+      - added digiout_dt340 as an example app to talk to the digital output
+        lines 23.7.2009chk
