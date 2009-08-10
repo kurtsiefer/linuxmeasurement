@@ -19,6 +19,7 @@
 #include <time.h>
 #include <signal.h>
 #include <strings.h>
+#include <sys/ioctl.h>
 
 #include "dt340.h"
 

@@ -3,7 +3,7 @@
 
    Usage:
 
-   counter [-t time] [-d nnnn] [-m time]
+   counter2 [-t time] [-d nnnn] [-m time]
    
    The program starts the nine counters, integrates for a time specified
    in the -t option and returns the value of all (or the specified counters
@@ -35,6 +35,7 @@
 
    prelim version (laeuft im Test)            22.3.02, Christian Kurtsiefer
    fixed strings dependency...     6.11.2006 chk
+   fixed minor complaints          10.8.2009chk
 
 */
 
@@ -45,6 +46,7 @@
 #include <time.h>
 #include <signal.h>
 #include <strings.h>
+#include <sys/ioctl.h>
 
 #include "dt340.h"
 
@@ -115,11 +117,11 @@ void watchdog_handler(int sig) {
    if (sig==SIGALRM) watchdog =-1;
 }
 int main(int argc, char *argv[]) {
-  unsigned long integtime = DEFAULT_INTEGTIME;
-  unsigned long integtime1;
+  unsigned int integtime = DEFAULT_INTEGTIME;
+  unsigned int integtime1;
   char out_sequence[SEQ_MAXLEN+1] = DEFAULT_SEQUENCE;
-  int opt, i, r1, r2;
-  unsigned long counts[6];          /* counting results */
+  int opt, i;
+  unsigned int counts[6];          /* counting results */
   int handle;     /* iocard handle */
   int maxtimesl = DEFAULT_MAXTIMESLOT;
   int cr_option = CR_OPTION_DEFAULT;  /* if true, append newline to output */ 
@@ -134,7 +136,7 @@ int main(int argc, char *argv[]) {
       cr_option=0;
       break;
     case 't':
-      sscanf(optarg,"%d",&integtime);
+      sscanf(optarg,"%u",&integtime);
       /* integration time ok? */
       if (integtime > MAX_INTEGTIME || integtime < 0) return emsg(1);
       break;
@@ -233,7 +235,7 @@ int main(int argc, char *argv[]) {
   if (watchdog)
       fprintf(stderr,"A timeout occured, which should not happen. Hardware bug?\n");  
   for (i=0; i<SEQ_MAXLEN && out_sequence[i] !=0; i++) 
-    fprintf(stdout," %d",counts[out_sequence[i]-'1']);
+    fprintf(stdout," %u",counts[out_sequence[i]-'1']);
   if (cr_option) fprintf(stdout,"\n");
   return 0;
 
