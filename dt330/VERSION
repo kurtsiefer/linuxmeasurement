@@ -1,0 +1,6 @@
+state of this document 10.8.2009
+
+as of 10.8.2009: fixed interrupt problem with newer kernel: SA_INTERRPUT and
+SA_SHIRQ got changed to new names IRQF_DISABLED and IRQF_SHARED, changed
+handler function prototype. compiles on a 2.6.22.19 x86_64 and on 2.6.27.25
+@i686 machine.

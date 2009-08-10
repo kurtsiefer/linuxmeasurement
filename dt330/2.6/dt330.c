@@ -114,6 +114,7 @@
 
    transition to 2.6 kernel, needs to be tested. updated pci_enable
        location 5.9.07chk
+   updated SA_INTERRUPT and  SA_SHIRQ flags.          10.8.09chk
 
 */
  
@@ -202,8 +203,9 @@ typedef struct cardinfo {
 static struct cardinfo *cif[NUMBER_OF_CARDS];
 
 
-static irqreturn_t dt330_int_handler(int irq, void *cp_proto,
-				     struct pt_regs *regs) {
+static irqreturn_t dt330_int_handler(int irq, void *cp_proto
+				     /* , struct pt_regs *regs */
+    ) {
     struct cardinfo *cp = (struct cardinfo *)cp_proto;
     int i;
     struct intstuff *ist = &itable[cp->intstuffref];
@@ -281,7 +283,9 @@ static int dt330_flat_open_irq(struct inode *inode, struct file *filp) {
 
     /* get irq */
     retval=request_irq(cp->irq_number, dt330_int_handler, 
-		       SA_INTERRUPT|SA_SHIRQ, IOCARD_NAME,
+		       /* old version: SA_INTERRUPT|SA_SHIRQ, */
+		       IRQF_DISABLED | IRQF_SHARED,
+		       IOCARD_NAME,
 		       cp);  /* points to card stuff */
     if (retval) return retval; /* no success in getting irq */
 
