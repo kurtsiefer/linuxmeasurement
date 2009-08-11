@@ -1,10 +1,23 @@
 /* sm32_kmodule.c for kernel version 2.6
 
-   Driver for the OWIS stepper motor driver sm32. 
-   minor device 0 should give read/write access to the 0x20 bytes of dual port
-   ram on the board, being referenced to by the third address region of the
-   plx 9030 bridge.
+   Copyright (C) 2002, 2006, 2009 Christian Kurtsiefer
+   <christian.kurtsiefer@gmail.com>
 
+   This source code is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Public License as published
+   by the Free Software Foundation; either version 2 of the License,
+   or (at your option) any later version.
+
+   This source code is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+   Please refer to the GNU Public License for more details.
+
+   You should have received a copy of the GNU Public License along with
+   this source code; if not, write to:
+   Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+---
  * Driver for a OWIS SM32 stepper motor driver card. This is rather clever
  * card, doing most of the tricky stuff on a microcontroller. This driver
  * only tries to give a convenient access to the various interface levels.
@@ -58,10 +71,14 @@
    use than the SM30 driver, and can possibly be extended to a
    multiple-process access topology.
 
+   History:
+
    first working version              Christian Kurtsiefer, 24.03.2002
    transition to kernel version 2.6;removed minor 2 precautions; made driver
    able to handle multiple cards (yet to be tested, works fine with one)
    loads/unloads cleanly.  7.11.2006 chk
+   fixed include file to work on 2.6.27 kernel  11.8.2009chk
+
 */ 
 
 #include <linux/module.h>

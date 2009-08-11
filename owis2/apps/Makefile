@@ -13,7 +13,7 @@ stepmotor2: stepmotor2.c
 
 clean:
 	rm $(targets)
-	rm ../counter2
+	rm -f ../stepmotor2
 
 links:	
 	ln -s -sf apps/stepmotor2 ../stepmotor2
