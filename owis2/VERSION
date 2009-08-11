@@ -1,3 +1,7 @@
+Status of this file: 11.8.2009
+
+fixed include statement to be able to compile on 2.6.27 kernel 11.8.2009chk
+
 This file was written 29. Feb 2008
 
 Last tracable change was on 12. Mar 2007 to the device installation code,
