@@ -23,8 +23,8 @@
 # Default-Stop: 0 1 2 4 6
 # Short-Description: Owis Sm32 stepper motor card driver
 # Description: Device driver for the OWIS SM32 stepper motor
-#	 driver card. Should work with data more than one driver
-#        card acquisition card, but this was not tested. Generates
+#	 driver card. Should work with more than one driver
+#        card card, but this was not tested. Generates
 #        also the appropriate device files.
 ### END INIT INFO
 
