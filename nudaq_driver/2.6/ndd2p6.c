@@ -40,15 +40,10 @@
      irqs are issued to the driver 5.9.07chk
    
    fixed syntax with irq flags and irq handler parameters 17.4.09chk
+   attempt to fix missing nopage method in newer kernels 11.8.09chk
+   STILL NEEDS HEAVY CLEANUP!!!!!!!!
 
    */
-
-
-
-/* this is a dirty hack for the missing AMCC definition in the 10.2 distro */
-#ifndef PCI_VENDOR_ID_AMCC
-#define PCI_VENDOR_ID_AMCC 0x10e8
-#endif
 
 
 /*
@@ -188,11 +183,25 @@ History:
 #include <linux/mm.h>
 #include <linux/pagemap.h>
 
+#include <linux/version.h>
+
+
+
+/* fix the nopage -> fault method transition */
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,22) )
+#define HAS_FAULT_METHOD
+#endif
+
 /* Module parameters */
 MODULE_AUTHOR("Christian Kurtsiefer <christian.kurtsiefer@gmail.com>");
 MODULE_DESCRIPTION("Nudaq PCI7200 driver for Linux for kernel 2.6\n");
 MODULE_LICENSE("GPL");
 
+
+/* this is making up for the missing AMCC definition in the 10.2 distro */
+#ifndef PCI_VENDOR_ID_AMCC
+#define PCI_VENDOR_ID_AMCC 0x10e8
+#endif
 
 #define PCI_DEVICE_ID_NUDAQ7200 0x80d8
   
@@ -777,7 +786,41 @@ static void dmar_vm_close(struct  vm_area_struct * area) {
 }
 
 
-/* vm_operations, die das eigentliche mmap über die nopage-methode vornehmen */
+/* vm_operations to do the core mmap */
+
+/* as of kernel 2.6.23 or so the fault()method is the advertised way of 
+   carrying out the remapping of DMA memory into user space, but that was
+   only establised later.  Earlier kernel versions still need the nopage()
+   method.
+*/
+#ifdef HAS_FAULT_METHOD      /* new fault() code */
+static int dmar_vm_fault(struct vm_area_struct *area, struct vm_fault *vmf) {
+    unsigned long ofs = (vmf->pgoff << PAGE_SHIFT); /* should be addr_t ? */
+    unsigned long intofs;
+    unsigned char * virtad = NULL; /* start ad of page in kernel space */
+    struct dma_page_pointer *pgindex;
+
+    /* find right page */
+    /* TODO: fix references... */
+    pgindex = dma_main_pointer; /* start with first mem piece */
+    intofs=0; /* linear offset of current mempiece start */
+    while (intofs+pgindex->fullsize<=ofs) {
+	intofs +=pgindex->fullsize;
+	pgindex=pgindex->next;
+	if (pgindex == dma_main_pointer) {
+            /* offset is not mapped */
+	    return VM_FAULT_SIGBUS; /* cannot find a proper page  */
+	}
+    }; /* pgindex contains now the relevant page index */
+  
+    /* do remap by hand */
+    virtad = &pgindex->buffer[ofs-intofs];
+    vmf->page = virt_to_page(virtad); /* return page index */
+
+    return 0;  /* everything went fine */ 
+}
+
+#else /* This is the old nopage method for compatibility reasons */
 static struct page *dmar_vm_nopage(struct vm_area_struct * area, unsigned long address, int *nopage_type) {
     struct page *page = NOPAGE_SIGBUS; /* for debug, gives mempage */
     
@@ -808,12 +851,18 @@ static struct page *dmar_vm_nopage(struct vm_area_struct * area, unsigned long a
     *nopage_type = VM_FAULT_MINOR; /* new in kernel 2.6 */
     return page;
 }
+#endif
 
 /* modified from kernel 2.2 to 2.4 to have only 3 entries */
 static struct vm_operations_struct dmar_vm_ops = {
     open: dmar_vm_open,
     close: dmar_vm_close, 
-    nopage: dmar_vm_nopage, /* nopage */};
+#ifdef HAS_FAULT_METHOD
+    fault:     dmar_vm_fault,  /* introduced in kernel 2.6.23 */
+#else
+    nopage: dmar_vm_nopage, /* nopage */
+#endif
+};
 
 
 static int dma_r_open(struct inode * inode, struct file * filp) {
@@ -1012,24 +1061,27 @@ static ssize_t dma_r_read(struct file *file, char *buffer, size_t count, loff_t 
 }
 
 static int dma_r_mmap(struct file * file, struct vm_area_struct *vma) {
-  int erc; /* returned error code in case of trouble */
-  /* check if memory exists already */
-  if (dma_main_pointer) return -EFAULT;
-
-  if (VMA_OFFSET(vma)!=0) return -ENXIO; /* alignment error */
-  /* should there be more checks? */
-
-  /* get DMA-buffer first */
-  erc=get_dma_buffer(vma->vm_end-vma->vm_start); /* offset? page alignment? */
-  if (erc) {
-    printk("getmem error, code: %d\n",erc);return erc;
-  }
-  /* do mmap to user space */
-
-  vma->vm_ops = &dmar_vm_ops; /* get method */
-  vma->vm_flags |= VM_RESERVED; /* avoid swapping , also: VM_SHM?*/
-
-  return 0;
+    int erc; /* returned error code in case of trouble */
+    /* check if memory exists already */
+    if (dma_main_pointer) return -EFAULT;
+    
+    if (VMA_OFFSET(vma)!=0) return -ENXIO; /* alignment error */
+    /* should there be more checks? */
+    
+    /* get DMA-buffer first */
+    erc=get_dma_buffer(vma->vm_end-vma->vm_start); /* offset? page alignment? */
+    if (erc) {
+	printk("getmem error, code: %d\n",erc);return erc;
+    }
+    /* do mmap to user space */
+    
+    vma->vm_ops = &dmar_vm_ops; /* get method */
+    vma->vm_flags |= VM_RESERVED; /* avoid swapping , also: VM_SHM?*/
+#ifdef HAS_FAULT_METHOD
+    vma->vm_flags |= VM_CAN_NONLINEAR; /* has fault method; do we need more? */
+#endif
+    
+    return 0;
 }
 
 /* for sending the calling process a signal */

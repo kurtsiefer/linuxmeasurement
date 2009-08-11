@@ -1,3 +1,7 @@
+11.8.2009 
+minor patch to make the code running on kernels >2.6.23 or so due to obsoleted
+nopage method. Still needs heavy cleanup and testing.
+
 26. Feb 2008
 
 This device driver is starting to get problematic in its way it shares direct
