@@ -1,4 +1,6 @@
-/* dt302.c - version for kernel version 2.6
+/* modification to use new dma buffer alloc
+
+dt302.c - version for kernel version 2.6
 
   Copyright (C) 2002-2009 Christian Kurtsiefer <christian.kurtsiefer@gmail.com>
 
@@ -72,6 +74,9 @@
 
 #include "dt302.h"
 
+
+#define NEWDMA yes
+
 /* Module parameters*/
 MODULE_AUTHOR("Christian Kurtsiefer <christian.kurtsiefer@gmail.com>");
 MODULE_DESCRIPTION("Data Translation DT302 driver for Linux for kernel 2.6\n");
@@ -98,7 +103,7 @@ MODULE_LICENSE("GPL");
 #define BUFFER_RAM_PAGE_ORDER 7
 #define BUFFER_ALIGNMENT_MASK 0x3ffff
 #define SUB_BUFFER_MASK 0x2000 /* to mask out buffer change */
-
+#define BUFFER_SIZE (PAGE_SIZE << BUFFER_RAM_PAGE_ORDER)
 
 /* local status variables for cards */
 #define NUMBER_OF_CARDS 5
@@ -115,6 +120,11 @@ typedef struct cardinfo {
     unsigned char *aligned_buffer;   /* aligned buffer pointer; kernel adr */
     int card_type; /* contains the numeric ID of the card */
     int already_transferred_values; /* user transfer count */
+    
+    /* new stuff for direct dma alloc */
+    struct device *dev;  /* holds device ID */
+    dma_addr_t buf_busaddr_raw; /* holds unaligned bus address */
+    unsigned int rawbuffersize; /* for freeing later */ 
 } cdi;
 
 static struct cardinfo *cif[NUMBER_OF_CARDS];
@@ -592,7 +602,6 @@ struct file_operations dt302_fops = {
 };
 
 
-
 /* initialisation of the driver: getting resources etc. */
 static int __init dt302_init_one(struct pci_dev *dev, const struct pci_device_id *ent) {
     
@@ -618,6 +627,32 @@ static int __init dt302_init_one(struct pci_dev *dev, const struct pci_device_id
     /* get resources */
     cp->mem_base0 = pci_resource_start(dev, 0);
 
+#ifdef NEWDMA
+    cp->dev = &(dev->dev); /* store device address */
+    cp->rawbuffersize = BUFFER_SIZE;
+    cp->rawtargetbuffer = dma_alloc_coherent(cp->dev, 
+					     cp->rawbuffersize,
+					     &cp->buf_busaddr_raw,
+					     GFP_KERNEL);
+    if (!(cp->rawtargetbuffer)) { /* cannot get small memory */
+	goto out3;}
+    cp->buf_busaddr = cp-> buf_busaddr_raw;    
+    if (cp->buf_busaddr & BUFFER_ALIGNMENT_MASK) { /* not aligned */
+	/* free old one */
+	dma_free_coherent(cp->dev, cp->rawbuffersize, 
+			 cp->rawtargetbuffer, cp->buf_busaddr_raw );
+	/* get larger one */
+	cp->rawbuffersize *= 2 ;
+	cp->rawtargetbuffer = dma_alloc_coherent(cp->dev, 
+						 cp->rawbuffersize,
+						 &cp->buf_busaddr_raw,
+						 GFP_KERNEL);
+	if (!(cp->rawtargetbuffer)) { /* cannot get large memory */
+	    goto out3;}
+	cp->buf_busaddr = (cp-> buf_busaddr_raw & ~BUFFER_ALIGNMENT_MASK)
+	    + BUFFER_ALIGNMENT_MASK +1 ;
+    }
+#else
     /* try to get 256 k contiguous RAM buffer for busmaster DMA */
     cp->targetorder = BUFFER_RAM_PAGE_ORDER;
     cp->rawtargetbuffer = (void *)__get_free_pages(GFP_KERNEL,cp->targetorder);
@@ -640,8 +675,10 @@ static int __init dt302_init_one(struct pci_dev *dev, const struct pci_device_id
 		(BUFFER_ALIGNMENT_MASK +1);
 	}
     }
+#endif
+
     cp->aligned_buffer = bus_to_virt(cp->buf_busaddr); /* start of aligned buffer */
-  
+
     /* register resources with kernel */    
     if (check_mem_region(cp->mem_base0,IOCARD_SPACE+1)) {
 	printk("dt302: memory at %x already in use\n",cp->mem_base0);
@@ -668,7 +705,12 @@ static int __init dt302_init_one(struct pci_dev *dev, const struct pci_device_id
     release_mem_region(cp->mem_base0,IOCARD_SPACE+1);  
  out1:
     /* first give back DMA buffer */
+#ifdef NEWDMA
+    dma_free_coherent(cp->dev, cp->rawbuffersize, 
+		      cp->rawtargetbuffer, cp->buf_busaddr_raw );
+#else
     free_pages((unsigned long) cp->rawtargetbuffer,cp->targetorder);
+#endif
     kfree(cp);
     return -EBUSY;
  out3:

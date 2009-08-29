@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
   ioctl(fh,RESET_AD_UNIT);
   /* set AD operation mode : internal triggered scan */
   ioctl(fh,SELECT_AD_CONFIGURATION,
-	CONTINUOUS_SCAN_MODE );
+	TRIGGERED_SCAN_MODE );
   /*| SOFTWARE_INITIAL_TRIGGER | INTERNAL_RETRIGGER_AD
     | INTERNAL_AD_SAMPLE_CLK | AD_BIPOLAR_MODE | AD_DIFFERENTIAL_ENDED);*/
 
