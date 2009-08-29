@@ -47,7 +47,8 @@
    migrated to kenel 2.6   30.7.04 chk 
    inserted multicard feature, read method  24.9.06 chk
    moved pci_enable to better position  5.9.07chk
-   changed dma buffer allocation to modern mode  29.8.09chk
+   changed dma buffer allocation to modern mode, fixed transferred
+   values ioctl, fixed buffer re-arrange in old mode. 29.8.09chk
 
    ToDo:
    - docu der min device 0 features steht noch aus.
@@ -522,7 +523,6 @@ static int dt302_advanced_ioctl(struct inode *inode, struct file *filp, unsigned
 		    /* clear block done bit if end-of-block is reached */ 
 		    writel(HOST_BLOCK_DONE, card+GEN_STATUS_REG);
 		}
-		cp->already_transferred_values++; /* update read bytes */
 		return tmp2;
 	    } else {
 		return -1;
@@ -674,7 +674,7 @@ static int __init dt302_init_one(struct pci_dev *dev, const struct pci_device_id
 	}
 	cp->buf_busaddr= virt_to_bus(cp->rawtargetbuffer);
 	if (cp->buf_busaddr & BUFFER_ALIGNMENT_MASK) { /* do alignment */
-	    cp->buf_busaddr = (cp->buf_busaddr & BUFFER_ALIGNMENT_MASK) + 
+	    cp->buf_busaddr = (cp->buf_busaddr & (~BUFFER_ALIGNMENT_MASK)) + 
 		(BUFFER_ALIGNMENT_MASK +1);
 	}
     }

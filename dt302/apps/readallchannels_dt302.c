@@ -58,8 +58,8 @@ void sighandler(int sig) {
 #define DEFAULT_TIMEOUT 1 /* in seconds */
 
 #define conversion_offset -10.0
-#define conversion_LSB_12 (20.0/4096) 
-#define conversion_LSB_16 (20.0/65536) 
+#define conversion_LSB_12 (20.0 / 4096) 
+#define conversion_LSB_16 (20.0 /65536) 
 
 
 int main(int argc, char *argv[]) {
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
   int gain_code;
   int channel;
   int opt;
-  int conversion; /* holds conversion factor for different cards */
+  float conversion; /* holds conversion factor for different cards */
   int device;     /* which DT card */
 
   /* try to find board */
@@ -99,10 +99,10 @@ int main(int argc, char *argv[]) {
 
   /* printf("channel: %d, gain: %d, gaincode: %d\n",channel, gain, gain_code); */
   
-  /* initialize TIMER unit to create a scan clock of 100 kHz and a frame
+  /* initialize TIMER unit to create a scan clock of 25 kHz and a frame
      periode of 100 msec*/
   ioctl(fh,TIMER_RESET);
-  ioctl(fh,SET_AD_SAMPLE_PERIODE,0xffffff+2-200); /* 200 main clk cycles */
+  ioctl(fh,SET_AD_SAMPLE_PERIODE,0xffffff+2-800); /* 800 main clk cycles */
   ioctl(fh,SET_AD_TRIG_PERIODE, 0xffffff+2-2000000); /* 2E6 main clk cycles */
 
   /* initialize ADC card */
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
 
   /* do adaption to different cards */
   device = ioctl(fh, IDENTIFY_DTAX_CARD );
-  /* printf("device: %d\n",device); */
+  // printf("device: %d\n",device);
   switch (device) {
       case 322: /* for 16-bit converter */
 	  conversion=conversion_LSB_16;
@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
   raw_value = ioctl(fh,GET_NEXT_VALUE);
   for (channel=0;channel<8;channel++) {
       raw_value = ioctl(fh,GET_NEXT_VALUE);
-      /*  printf("raw value: %x\n",raw_value);  */
+      //printf("raw value: %x\n",raw_value); 
       fval = ((float)raw_value)*conversion+conversion_offset;
       printf("%f ", fval);
   };
