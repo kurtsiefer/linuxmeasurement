@@ -2,8 +2,5 @@ The driver and the applications seem to work in its original version, but
 there are a few things which need to be checked:
 
 - backpropagation of some options to 2.4 to have consistent header file
-- test read method with card
-- check possible inconsistencies while reading out a single value. Somehow
-  I don't trust the DT302 toofar....
-- implement a simple oscilloscope
+- implement a fancier oscilloscope
 - clean up directories...

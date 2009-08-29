@@ -1,4 +1,9 @@
-State of this document 26.2.2008
+State of this document 29.8.2008
+
+A set of bugfixes in the driver and the applications. Tested on a 2.6.27
+kernel 29.8.2009chk
+
+Attempt to have a cleaner directory structure 26.2.2008
 
 last modifications seem to have taken place in Sept 2007
 

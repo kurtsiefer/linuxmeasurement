@@ -9,9 +9,7 @@
    channel ranges from 0 to 7, 0 is default.
    gain can be 1,2,4,8; default is 1.
 
-
-   ????reads in weired values sometimes.
-
+   sample time increased to 40 usec to have less noise. 29.8.09chk
 
 */
 
@@ -96,13 +94,11 @@ int main(int argc, char *argv[]) {
   for (i=0;((i<4) && (gain != gainlist[i])) ;i++);
   if (i>=4) return -emsg(4); /* wrong gain */
   gain_code = gaintab[i];
-
-  /* printf("channel: %d, gain: %d, gaincode: %d\n",channel, gain, gain_code); */
   
-  /* initialize TIMER unit to create a scan clock of 100 kHz and a frame
+  /* initialize TIMER unit to create a scan clock of 25 kHz and a frame
      periode of 100 msec*/
   ioctl(fh,TIMER_RESET);
-  ioctl(fh,SET_AD_SAMPLE_PERIODE,0xffffff+2-200); /* 200 main clk cycles */
+  ioctl(fh,SET_AD_SAMPLE_PERIODE,0xffffff+2-200); /* 800 main clk cycles */
   ioctl(fh,SET_AD_TRIG_PERIODE, 0xffffff+2-2000000); /* 2E6 main clk cycles */
 
   /* initialize ADC card */
@@ -164,8 +160,6 @@ int main(int argc, char *argv[]) {
   }
   fval = ((float)raw_value)*conversion+conversion_offset;
   printf("%f\n", fval);
- 
-  /* printf("fresh_values: %d\n",ioctl(fh,NEXT_INDEX_TO_WRITE)); */
 
   close(fh);
   return 0; 

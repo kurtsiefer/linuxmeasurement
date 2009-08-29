@@ -48,15 +48,14 @@
    inserted multicard feature, read method  24.9.06 chk
    moved pci_enable to better position  5.9.07chk
    changed dma buffer allocation to modern mode, fixed transferred
-   values ioctl, fixed buffer re-arrange in old mode. 29.8.09chk
+    values ioctl, fixed buffer re-arrange in old mode. fixed read
+    code29.8.09chk
 
    ToDo:
    - docu der min device 0 features steht noch aus.
    -  docu der min device 1 features steht noch aus.
    - translate docu to english
-   - Implementierung der read-methode fuer DMA-Puffer -ok?
    - Implementation von TRIMPOT_WRITE/READ commands
-   - test read access to the card.
 */
 
 #include <linux/module.h>
@@ -106,7 +105,7 @@ MODULE_LICENSE("GPL");
 /* RAM buffer related stuff */
 #define BUFFER_RAM_PAGE_ORDER 7
 #define BUFFER_ALIGNMENT_MASK 0x3ffff
-#define SUB_BUFFER_MASK 0x2000 /* to mask out buffer change */
+#define SUB_BUFFER_MASK 0x20000 /* to mask out buffer change */
 #define BUFFER_SIZE (PAGE_SIZE << BUFFER_RAM_PAGE_ORDER)
 
 /* local status variables for cards */
@@ -259,6 +258,7 @@ static ssize_t dt_302_advanced_read(struct file *filp,
     if (start_idx > end_idx) {
 	/* overwrap buffer */
 	bytes_to_transfer = WORDS_IN_BUFFER * 2 - start_idx;
+	//printk(" overwrap transfer: to do: %d\n",bytes_to_transfer);
 	if (bytes_to_transfer > (num_of_bytes&~1)) 
 	    bytes_to_transfer = num_of_bytes&~1; /* limit to user buffer */
 	retval = copy_to_user(targetbuffer, &(cp->aligned_buffer[start_idx]),
@@ -266,8 +266,8 @@ static ssize_t dt_302_advanced_read(struct file *filp,
 	if (retval) return -EFAULT; /* cannot copy to user space */
 	/* clear host block done bit; retreive DAC write bit according
 	   to DTAX specs?? */
-	tmp1= readl(card+GEN_CONTROL_REG_0) & DA_SHIFT_IN_PROGRESS; rmb();
-	writel(tmp1 | HOST_BLOCK_DONE, card+GEN_CONTROL_REG_0);
+	tmp1= readl(card+GEN_STATUS_REG) & DA_SHIFT_IN_PROGRESS; rmb();
+	writel(tmp1 | HOST_BLOCK_DONE, card+GEN_STATUS_REG);
 	
 	transferred = bytes_to_transfer; /* for second round */
 	start_idx = 0;
@@ -286,8 +286,8 @@ static ssize_t dt_302_advanced_read(struct file *filp,
     if ((start_idx ^ (start_idx + bytes_to_transfer)) & SUB_BUFFER_MASK) {
 	/* clear host block done bit; retreive DAC write bit according
 	   to DTAX specs?? */
-	tmp1= readl(card+GEN_CONTROL_REG_0) & DA_SHIFT_IN_PROGRESS; rmb();
-	writel(tmp1 | HOST_BLOCK_DONE, card+GEN_CONTROL_REG_0);
+	tmp1= readl(card+GEN_STATUS_REG) & DA_SHIFT_IN_PROGRESS; rmb();
+	writel(tmp1 | HOST_BLOCK_DONE, card+GEN_STATUS_REG);
 	}
     transferred += bytes_to_transfer; /* for second round */
     cp->already_transferred_values += transferred >>1; /* words transferred */
