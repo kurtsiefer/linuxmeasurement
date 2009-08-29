@@ -1,6 +1,5 @@
 /* program to read in all eight differential input channels
-   with the dt302 card.
-   adapted such that usage is similar to NI multifunct card.
+   with the dt302/DT322 card.
 
    usage:
 
@@ -9,13 +8,10 @@
   
    gain can be 1,2,4,8; default is 1.
 
-
-   ????reads in weired values sometimes.
-
    modified: returns now 0 in case of normal operation; code cleaned up
-
     10.3.04 chk
 
+   adapted single round read and permit different cards still ugly. 29.8.09chk
 */
 
 #include <fcntl.h>
@@ -62,7 +58,9 @@ void sighandler(int sig) {
 #define DEFAULT_TIMEOUT 1 /* in seconds */
 
 #define conversion_offset -10.0
-#define conversion_LSB (20.0/4096) 
+#define conversion_LSB_12 (20.0/4096) 
+#define conversion_LSB_16 (20.0/65536) 
+
 
 int main(int argc, char *argv[]) {
   int fh; /* card filehandle */
@@ -74,12 +72,14 @@ int main(int argc, char *argv[]) {
   int gain_code;
   int channel;
   int opt;
+  int conversion; /* holds conversion factor for different cards */
+  int device;     /* which DT card */
 
-  /* board suchen */
+  /* try to find board */
   fh=open(BOARDNAME,O_RDWR);
   if (fh==-1) return -emsg(1);
   
-  /* eingabeparemater testen */
+  /* parse input parameter */
   opterr=0; /* be quiet when there are no options */
   while ((opt=getopt(argc, argv, "g:")) != EOF) {
       switch (opt) {
@@ -109,10 +109,10 @@ int main(int argc, char *argv[]) {
   ioctl(fh,RESET_AD_UNIT);
   /* set AD operation mode : internal triggered scan */
   ioctl(fh,SELECT_AD_CONFIGURATION,
-	TRIGGERED_SCAN_MODE );
-  /*| SOFTWARE_INITIAL_TRIGGER | INTERNAL_RETRIGGER_AD
-    | INTERNAL_AD_SAMPLE_CLK | AD_BIPOLAR_MODE | AD_DIFFERENTIAL_ENDED);*/
-
+	TRIGGERED_SCAN_MODE 
+	| SOFTWARE_INITIAL_TRIGGER | INTERNAL_RETRIGGER_AD
+	| INTERNAL_AD_SAMPLE_CLK | AD_BIPOLAR_MODE | AD_DIFFERENTIAL_ENDED);
+  
   /* initialize hardware buffer */
   ioctl(fh,LOAD_PCI_MASTER);
   
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
   ioctl(fh,PUSH_CGL_FIFO, 0 | gain_code ); /* allow for setup */
   for (channel=0;channel<8;channel++) 
       ioctl(fh,PUSH_CGL_FIFO, channel | gain_code );
-
+  
   /* preload CGL list */
   ioctl(fh, PRELOAD_CGL);
 
@@ -145,12 +145,25 @@ int main(int argc, char *argv[]) {
 
   if (timedout) return -emsg(5); /* timeout */
 
+  /* do adaption to different cards */
+  device = ioctl(fh, IDENTIFY_DTAX_CARD );
+  /* printf("device: %d\n",device); */
+  switch (device) {
+      case 322: /* for 16-bit converter */
+	  conversion=conversion_LSB_16;
+	  break;
+      default:  /* for 12-bit converter */
+	  conversion=conversion_LSB_12;
+	  break;
+  }
+
+  
   /* read in data */
   raw_value = ioctl(fh,GET_NEXT_VALUE);
   for (channel=0;channel<8;channel++) {
       raw_value = ioctl(fh,GET_NEXT_VALUE);
       /*  printf("raw value: %x\n",raw_value);  */
-      fval = ((float)raw_value)*conversion_LSB+conversion_offset;
+      fval = ((float)raw_value)*conversion+conversion_offset;
       printf("%f ", fval);
   };
   printf("\n");

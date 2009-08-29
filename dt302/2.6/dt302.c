@@ -1,6 +1,4 @@
-/* modification to use new dma buffer alloc
-
-dt302.c - version for kernel version 2.6
+/* dt302.c - version for kernel version 2.6
 
   Copyright (C) 2002-2009 Christian Kurtsiefer <christian.kurtsiefer@gmail.com>
 
@@ -49,6 +47,7 @@ dt302.c - version for kernel version 2.6
    migrated to kenel 2.6   30.7.04 chk 
    inserted multicard feature, read method  24.9.06 chk
    moved pci_enable to better position  5.9.07chk
+   changed dma buffer allocation to modern mode  29.8.09chk
 
    ToDo:
    - docu der min device 0 features steht noch aus.
@@ -74,7 +73,11 @@ dt302.c - version for kernel version 2.6
 
 #include "dt302.h"
 
-
+/* This is a flag to indicate that the DMA buffer should be allocated with
+   dma_alloc_coherent instead of the old by-hand method with _get_free_pages.
+   This seems to get the caching right with newer kernels.  In a newer version,
+   this probably should be made the default, and the old code should go.
+*/ 
 #define NEWDMA yes
 
 /* Module parameters*/
