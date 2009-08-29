@@ -6,6 +6,7 @@
 # variable definitions and default values:
 set nru 0
 set RUNNING 0
+set pd [pwd] ; # current working directory is program directory
 cd
 set wd [pwd]
 set sd [pwd] ; set sdl $sd ; # saving directory
@@ -14,7 +15,7 @@ set tipeb 100 ; set TIMEPERBIN $tipeb ; # time per bin in millisec
 set binu 40 ; set BINNUM $binu ; # initial bin number
 set tmpfile "[pwd]/.emil.dat"
 set TAXMIN "0" ; set TAXMAX $binu ; set YAXMIN "0" ; set YAXMAX ""
-set COUNTPROG "/home/qitlab/programs/counter/counter2"
+set COUNTPROG "$pd/counter2"
 set stretchval 1.0
 set stretchv $stretchval ; # stretch factor for coincidences
 set gpcnt 0 ; # counter for gnuplot calls
@@ -263,8 +264,8 @@ proc runproc {} {
     while {[expr ($RUNNING != 0) ]} {
 	set tmp [exec $COUNTPROG -d 1234 -t $TIMEPERBIN ]
 	exec echo $tmp >> $tmpfile
-	exec tail -n $BINNUM >$tmpfile.2
-	exec mv $tmpfile.2 >$tmpfile
+	exec tail -n $BINNUM $tmpfile > $tmpfile.2
+	exec mv $tmpfile.2 $tmpfile
 	set cv0 [lindex $tmp 0]
 	set cv1 [lindex $tmp 1]
 	set cv2 [lindex $tmp 2]
