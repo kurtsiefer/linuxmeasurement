@@ -2,5 +2,7 @@ The driver and the applications seem to work in its original version, but
 there are a few things which need to be checked:
 
 - backpropagation of some options to 2.4 to have consistent header file
-- implement a fancier oscilloscope
-- clean up directories...
+- backport / fix some of the errors into 2.4 kernel
+- document stuff
+- separate header files from internal stuff, clean up header files
+- fix loader scripts to make it compat with other loader scripts

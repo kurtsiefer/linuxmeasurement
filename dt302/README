@@ -35,6 +35,11 @@ readallchannels_dt302: small program to read in all eight differential input
 		       channels in one go.
 oscilloscope:          program to acquire a longer set of data from several
 		       channels with an adjustable timing down to 10 usec.
+oscilloscope2:         advanced version of oscilloscope, can trigger on
+		       a signal on one of the channels. 
+streaming:             a simplified version of the oscilloscope programs
+		       to read in a continuous stream of analog data.
+
 
 dt302_counter:    program to count pulses for a given time
                   interval. see source code for usage.
@@ -43,3 +48,4 @@ history:
   modified pci_enable position to get correct PCI resources 5.9.07chk
   migrated DMA buffer allocation to kernel routine, fixed ioctl value
     retreival counter and old misaligned buffer version. 29.9.09 chk
+  added oscilloscope programs 30.8.09chk

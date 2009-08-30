@@ -1,15 +1,14 @@
-/* program to read in all eight differential input channels
-   with the dt302 card. It is a simple implementation of the reasonably
-   complex data acquisition scheme possible with the DT card.
+/* program to read in from eight differential input channels with the
+   data translation dt302/dt322 card. It acquires a set of data continuously,
+   starting immediately after invocation, and then sends the output as a
+   formatted text to stdout. 
 
-   It acquires a set of data for a given time, starting immediately after
-   invocation, and then sends the output as a formatted text to stdout.
-
-   Works reasonably well, but does not have any fancy trigger yet.
+   If you need a limited number of points or trigger options, see the
+   oscilloscope or oscilloscope2 programs.
 
    usage:
 
-   oscilloscope [-g gain] [-m maxchannel] [-n sets] [s time] [-t]
+   adcstream [-g gain] [-m maxchannel] [-a outmode] [-s time]
 
    options: -t output time as well (in seconds)
    
@@ -18,23 +17,28 @@
 			with this gain, i.e., an input voltage of e.g. 1.0 Volt
 			at a gain of 4 gets reported as 4.0 Volt.
     
-    -t                : output time as first column (in seconds). By default,
-                        no time is sent to the output.
+    -a <fmt>          : output format. The following values of <fmt> are
+                        recognized. Default for <fmt> is 1.
+			  0: output in raw hex (unscaled), space separated.
+			     Each set gets a new line.
+			  1: output in normalized floats, space separated.
+			     The values are in volts
+			  2: plain binary output. The unscaled values are
+			     written as unseparated uint16_t, so separator.
 
     -m <maxchannel>   : largest channel to be collected. The default value is
                         1, corresponding to channels 0 and 1 to be sampled.
 
     -s <samplingtime> : sampling time in microseconds. Minimum is 10, default
                         is 1000. Maximum is 838000 (internal card limit?)
-
-    -n <numofsets>    : number of sample sets. Each sample set contains
-                        a sequence of all sampled channels. Default is 1000.
+    -F                : flushoption. If set, a fflush is forced after each
+                        data read cycle.
 
     If maxchannel is 2, the channel sampling takes place in the sequence
      0-1-2-0-1-2-0-1-2..... and the 0-1-2 sequence repeats <numofsets> times.
 
      history:
-       first working version 29.8.09chk
+       first working version 30.8.09chk
 
 */
 
@@ -56,13 +60,13 @@
 char *errormessage[] = {
   "No error.",
   "Can't open device.", /* 1 */
-  "Unused error mesg",
-  "Unused error msg",
+  "Empty error mesg",
+  "channel argument not in range 0..7",
   "Wrong gain value (choose 1,2,4 or 8).",
   "timeout occurred.", /* 5 */
-  "Unused error msg",
+  "Empty error msg",
   "largest channel index out of range (0..7)",
-  "Number of sampling points out of range",
+  "Wrong outmode (must be 0, 1, or 2)",
   "Sampling interval out of range (>10 usec, <1sec)",
   "data buffer malloc failed.", /* 10 */
 };
@@ -79,19 +83,20 @@ int emsg(int code) {
 /* timeout procedure */
 int timedout;
 void sighandler(int sig) {
-  if (sig==SIGALRM) timedout = 1;
-  return;
+    timedout = 1; /* do this with any signal */
+    return;
 };
 
 #define DEFAULT_GAIN 1
 #define DEFAULT_TIMEOUT 1 /* in seconds */
-#define DEFAULT_TIMEPUTPUTOPTION 0 /* no time output */
+#define DEFAULT_OUTMODE 1 /* ascii text, normalized */
 #define DEFAULT_MAXCHANNEL 1    /* samples channels 0 and 1 */
 #define DEFAULT_NUMOFPOINTS 1000
 #define MAX_NUMOFPOINTS 10000000 /* some limit */
 #define DEFAULT_SAMPLINGTIME 1000 /* one millisecond */
 #define MIN_SAMPLINGTIME 10
-#define MAX_SAMPLINGTIME 838000  /* 24 bit card limit */
+#define MAX_SAMPLINGTIME 838000  /* internal card limit (24 bit) */
+#define SLEEP_INTERVAL 20000 /* IN MICROSEC */
 
 /* conversion factors for different cards */
 #define conversion_offset -10.0
@@ -101,21 +106,21 @@ void sighandler(int sig) {
 
 int main(int argc, char *argv[]) {
   int fh; /* card filehandle */
-  int i,j;
+  int i;
   int gain = DEFAULT_GAIN;
   int gainlist[4]={1,2,4,8};
   int gaintab[4]={SELECT_GAIN_1,SELECT_GAIN_2,SELECT_GAIN_4,SELECT_GAIN_8};
   int gain_code;
   int channel;
   int opt;
-  int timeoutputoption = DEFAULT_TIMEPUTPUTOPTION;
+  int outmode = DEFAULT_OUTMODE;
   int maxchannel = DEFAULT_MAXCHANNEL;
   int numofpoints = DEFAULT_NUMOFPOINTS;
   int totalpoints;     /*  keeps numofpoints*(maxchannel+1) */
   int samplingtime = DEFAULT_SAMPLINGTIME;
   u_int16_t *data_buffer; /* data collection buffer */
   int device; 
-  float dt;
+  int flushoption = 0; /* no flush by default */
 
   /* reading in data */
   int p_already, i0;
@@ -127,13 +132,14 @@ int main(int argc, char *argv[]) {
   
   /* parse command line parameters */
   opterr=0; /* be quiet when there are no options */
-  while ((opt=getopt(argc, argv, "g:tm:s:n:")) != EOF) {
+  while ((opt=getopt(argc, argv, "g:a:m:s:F")) != EOF) {
       switch (opt) {
 	  case 'g': /* default gain */
 	      sscanf(optarg,"%d",&gain);
 	      break;
-	  case 't': /* output time option */
-	      timeoutputoption=1;
+	  case 'a': /* output option */
+	      sscanf(optarg, "%d", &outmode);
+	      if (outmode<0 || outmode>2) return -emsg(8);
 	      break;
 	  case 'm': /* max channel */
 	      sscanf(optarg, "%d", &maxchannel);
@@ -144,9 +150,8 @@ int main(int argc, char *argv[]) {
 	      if (samplingtime < MIN_SAMPLINGTIME ||
 		  samplingtime > MAX_SAMPLINGTIME) return -emsg(9);
 	      break;
-	  case 'n': /* number of points */
-	      sscanf(optarg, "%d", &numofpoints);
-	      if (numofpoints<0 || numofpoints>MAX_NUMOFPOINTS) return -emsg(8);
+	  case 'F': /* flush option */
+	      flushoption = 1;
 	      break;
 	  default:
 	      break;
@@ -199,23 +204,10 @@ int main(int argc, char *argv[]) {
   /* read in with timeout procedure */
   timedout=0;
   signal(SIGALRM, &sighandler); /* install signal handler */
-  alarm(samplingtime*totalpoints/1000000 + DEFAULT_TIMEOUT);
-    
-  /* read in data */
-  p_already = 0;
-  do {	 
-      i0=read(fh, &data_buffer[p_already],
-	      (totalpoints-p_already)*2)/2;
-      p_already += i0;
-      usleep(20000); /* slow acc */
-  } while ((p_already < totalpoints ) && !timedout);
+  signal(SIGTERM, &sighandler); /* for termination */
+  alarm(0);
 
-  alarm(0); /* disarm watchdog */
-  
-  /* disarm the card */
-  ioctl(fh,STOP_SCAN);
-  if (timedout) return -emsg(5); /* timeout */
-  
+  /* output format */
   device = ioctl(fh, IDENTIFY_DTAX_CARD );
   switch (device) {
       case 322: /* for 16-bit converter */
@@ -225,25 +217,47 @@ int main(int argc, char *argv[]) {
 	  conversion=conversion_LSB_12;
 	  break;
   }
+    
+  /* read in data */
+  p_already=0;
+  do { 
+      i0=read(fh, &data_buffer[0], totalpoints*2)/2;
+      
+      /* send it out */
+      switch (outmode) {
+	  case 0: /* plain hex */
+	      for (i=0; i<i0; i++) {
+		  printf(" %04x",data_buffer[i]);
+		  p_already++; 
+		  if ((p_already % (maxchannel+1))==0)
+		      printf("\n");
+	      }
+	      break;
+	  case 1: /* formatted ascii */
+	      for (i=0; i<i0; i++) {
+		  printf(" %f",conversion_offset + conversion*data_buffer[i]);
+		  p_already++; 
+		  if ((p_already % (maxchannel+1))==0)
+		      printf("\n");
+	      }
+	      break;
+	  case 2: /* plain binary */
+	      fwrite(data_buffer, sizeof(u_int16_t), i0, stdout);
+	      break;
+      }
+      
+      if (flushoption) fflush(stdout);
+
+      usleep(SLEEP_INTERVAL); /* slow acc */
+  } while (!timedout);
+
+  alarm(0); /* disarm watchdog */
   
-  /* output data, prelim */
-  if (timeoutputoption) {
-      dt=(maxchannel+1)*samplingtime*1E-6;
-      for (i=0; i<numofpoints; i++) {
-	  printf("%f ",i*dt);
-	  for (j=0;j<=maxchannel;j++)
-	      printf(" %f",conversion_offset + 
-		     conversion*data_buffer[i*(maxchannel+1)+j]);
-	  printf("\n");
-      }
-  } else {
-      for (i=0; i<numofpoints; i++) {
-	  for (j=0;j<=maxchannel;j++)
-	      printf("%f ",conversion_offset + 
-		     conversion*data_buffer[i*(maxchannel+1)+j]);
-	  printf("\n");
-      }
-  }
+  /* disarm the card */
+  ioctl(fh,STOP_SCAN);
+  if (timedout) return -emsg(5); /* timeout */
+  
+ 
   free(data_buffer);
   close(fh);
 
