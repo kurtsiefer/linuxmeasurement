@@ -39,6 +39,8 @@ oscilloscope2:         advanced version of oscilloscope, can trigger on
 		       a signal on one of the channels. 
 streaming:             a simplified version of the oscilloscope programs
 		       to read in a continuous stream of analog data.
+osci_script:           A simple GUI for the oscilloscope2 program using
+		       Tcl/Tk and gnuplot as a backend graphics engine.
 
 
 dt302_counter:    program to count pulses for a given time
@@ -49,3 +51,4 @@ history:
   migrated DMA buffer allocation to kernel routine, fixed ioctl value
     retreival counter and old misaligned buffer version. 29.9.09 chk
   added oscilloscope programs 30.8.09chk
+  added osci_script and fixed trigger delay bug in oscilloscope2 7.9.09chk

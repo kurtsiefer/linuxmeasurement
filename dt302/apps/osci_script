@@ -1,0 +1,485 @@
+#!/usr/bin/wish
+#
+# script to display continuously a spectrum from the USB2000 device
+
+set dataroot [pwd]
+set programroot [pwd]
+cd
+set sd [pwd] ; set sdl $sd ; # saving directory
+set program "$programroot/oscilloscope2"
+set tmpfile "$dataroot/.tempdata"
+set gnucontrol "$dataroot/monitor.gnu" ; # for gnu file
+set gnucanvas  "$dataroot/gcan" ; # canvas file
+set XMIN ""
+set XMAX ""
+set YMIN ""
+set YMAX ""
+set SAMPLETIME 100 ; # sample time in usec
+set sampt $SAMPLETIME
+set NUMBEROFPOINTS 100 ; # Number of sampled points
+set numpts $NUMBEROFPOINTS
+set triggermode 2 ; # auto trigger mode
+set triggerslope 1 ; # pos. slope
+set TRIGGERLEVEL 0.0
+set triglev $TRIGGERLEVEL
+set TRIGGERHYST 0.05 ; # hysteresis of trigger in Volt
+set trighy $TRIGGERHYST
+set TRIGGERDELAY 0.0 ; # from trigger to first p$oint
+set trigdel $TRIGGERDELAY
+set RUNNING 0
+set YSCALE 1
+set interpolmode 2 ; # interpolation between cells
+set gain 1 ; # amplitude gain
+set trigsrc 0 ; # channel of trigger src
+set tch $trigsrc
+set maxchan 1 ; # largest channel number to sample
+set mch $maxchan
+set continumode 0 ; # defines run mode
+set gridoptx 0 ; set gridopty 0 ; # display grids
+set tmultiplier 1 ; # t axis multiplier
+
+# title text
+set FNT "-*-Helvetica-*-r-*-*-18-180-*-*-*-*-*-*"
+label .headline -text "DT30x oscilloscope" -font $FNT
+pack .headline -anchor w
+
+# prepare buttons
+# main button tree
+frame .mainknobs
+button .mainknobs.start -text "start" -command runbutton 
+bind .mainknobs.start <Return> {.mainknobs.start invoke}
+pack .mainknobs.start -side left
+button .mainknobs.stop -text "stop" -command haltbutton
+bind .mainknobs.stop <Return> {.mainknobs.stop invoke}
+pack .mainknobs.stop -side left
+button .mainknobs.single -text "single" -command singlebutton
+bind .mainknobs.single <Return> {.mainknobs.single invoke}
+pack .mainknobs.single -side left
+
+button .mainknobs.save -text "save" -command savebutton
+button .mainknobs.exit -text "exit" -command exitbutton
+button .mainknobs.print -text "print" -command printbutton
+bind .mainknobs.save <Return> {.mainknobs.save invoke}
+bind .mainknobs.exit <Return> {.mainknobs.exit invoke}
+bind .mainknobs.print <Return> {.mainknobs.pint invoke}
+pack .mainknobs.save .mainknobs.exit .mainknobs.print -side left
+
+pack .mainknobs -anchor w
+
+# parameter entries
+frame .par
+label .par.t1 -text "Sample time:"
+label .par.t1a -text "usec          "
+entry .par.e1 -width 7 -relief sunken -bd 2 -textvariable sampt
+bind .par.e1 <Return> {
+    if {($sampt >= 10000) || ($sampt < 1)} {
+	set sampt $SAMPLETIME
+    }
+    set SAMPLETIME $sampt
+}
+
+label .par.t2 -text "Points:"
+entry .par.e2 -width 7 -relief sunken -bd 2 -textvariable numpts
+bind .par.e2 <Return> {
+    if {($numpts >= 10000) || ($numpts < 1)} {
+	set numpts $NUMBEROFPOINTS
+    }
+    set NUMBEROFPOINTS $numpts
+}
+
+label .par.t4 -text "Trigger mode:"
+frame .par.f1
+radiobutton .par.f1.rb1 -text "none" -variable triggermode -value 0
+radiobutton .par.f1.rb2 -text "norm" -variable triggermode -value 1
+radiobutton .par.f1.rb3 -text "auto" -variable triggermode -value 2
+pack .par.f1.rb1 .par.f1.rb2 .par.f1.rb3 -side left
+
+label .par.t5 -text "Trigger slope:"
+frame .par.f2
+radiobutton .par.f2.rb4 -text "pos" -variable triggerslope -value 1
+radiobutton .par.f2.rb5 -text "neg" -variable triggerslope -value -1
+pack .par.f2.rb4 .par.f2.rb5 -side left
+
+label .par.t6 -text "Trigger level:"
+entry .par.e6 -width 7 -relief sunken -bd 2 -textvariable triglev
+label .par.t6a -text "Volt"
+bind .par.e6 <Return> {
+    if {$triglev >= 10.0 } {
+	set triglev 10.0 
+    } elseif { $triglev < -10.0} {
+	set triglev -10.0
+    }
+    set TRIGGERLEVEL $triglev
+}
+
+label .par.t7 -text "Trigger hyst:"
+entry .par.e7 -width 7 -relief sunken -bd 2 -textvariable trighy
+label .par.t7a -text "Volt"
+bind .par.e7 <Return> {
+    if {$trighy <0.01 } {
+	set  trighy 0.01
+    }
+    if { $TRIGGERLEVEL-($triggerslope * $trighy) < -10.0 } {
+	set trighy ($TRIGGERLEVEL + 10.0) * $triggerslope
+    }
+    if { $TRIGGERLEVEL-($triggerslope * $trighy) > 10.0 } {
+	set trighy ($TRIGGERLEVEL - 10.0) * $triggerslope
+    }
+    set TRIGGERHYST $trighy
+}
+
+label .par.t8 -text "Trigger delay:"
+entry .par.e8 -width 7 -relief sunken -bd 2 -textvariable trigdel
+label .par.t8a -text "sec"
+bind .par.e8 <Return> {
+    set TRIGGERDELAY $trigdel
+}
+
+
+label .par.t10 -text "Trigger chan:"
+entry .par.e10 -width 2 -relief sunken -bd 2 -textvariable tch
+bind .par.e10 <Return> {
+    set tch [expr round($tch) ]
+    if { $tch > $maxchan} { set tch $maxchan }
+    if { $tch < 0 } { set tch 0 }
+    set trigsrc $tch
+}
+
+
+label .par.t20 -text "Max channel:"
+for { set i 0 } { $i < 8} {incr i} {
+    radiobutton .par.rb2$i -text "$i" -variable maxchan -value $i
+}
+
+entry .par.e20 -width 2 -relief sunken -bd 2 -textvariable mch
+bind .par.e20 <Return> {
+    set mch [expr round($mch) ]
+    if { $mch < $trigsrc} { set mch $trigsrc }
+    if { $mch > 7 } { set mch 7 }
+    set maxchan $mch
+}
+
+
+
+label .par.t30 -text "Gain:"
+frame .par.f30
+radiobutton .par.f30.rb31 -text "1" -variable gain -value 1
+radiobutton .par.f30.rb32 -text "2" -variable gain -value 2
+radiobutton .par.f30.rb34 -text "4" -variable gain -value 4
+radiobutton .par.f30.rb38 -text "8" -variable gain -value 8
+pack .par.f30.rb31 .par.f30.rb32 .par.f30.rb34 .par.f30.rb38 -side left
+
+label .par.t40 -text "Interpolation: "
+frame .par.f40
+radiobutton .par.f40.rb40 -text "none" -variable interpolmode -value 0
+radiobutton .par.f40.rb41 -text "cell" -variable interpolmode -value 1
+radiobutton .par.f40.rb42 -text "set" -variable interpolmode -value 2
+pack .par.f40.rb40 .par.f40.rb41 .par.f40.rb42 -side left
+
+grid .par.t1 .par.e1 .par.t1a .par.t2 .par.e2 -sticky w ; # sample time / num of points
+grid .par.t4 .par.f1 - - - - -sticky w ; # trigger mode
+grid .par.t5 .par.f2 - .par.t10 .par.e10 -sticky w ; # trigger slope/chan 
+grid .par.t6 .par.e6 .par.t6a .par.t7 .par.e7 .par.t7a -sticky w; # trigger level / hyst
+grid .par.t8 .par.e8 .par.t8a -sticky w ; # trigger delay
+grid .par.t30 .par.f30 -  .par.t20 .par.e20 -sticky w ; # gain
+grid .par.t40 .par.f40 - - - - -sticky w ; # interpolation mode
+
+pack .par
+
+
+# axis options
+frame .axops
+button .axops.taxis -text "time axis details" -command taxisbutton
+button .axops.yaxis -text "y axis details" -command yaxisbutton
+checkbutton .axops.gridx -text "t grid" -variable gridoptx -command updateboth;
+checkbutton .axops.gridy -text "y grid" -variable gridopty -command updateboth;
+bind .axops.taxis <Return> {.axops.taxis invoke}
+bind .axops.yaxis <Return> {.axops.yaxis invoke}
+pack .axops.taxis .axops.yaxis .axops.gridx .axops.gridy -side left
+pack .axops -anchor w
+
+# canvas for display
+canvas .1 ; # -bg white -width 500 -height 300
+pack .1
+
+# -------------------------------------------------------------
+# working procedures 
+
+# procedures for axis control
+proc taxisbutton {} {
+    global XMIN XMAX tmultiplier
+    set tmi $XMIN ; set tma $XMAX
+    if {[winfo exists .tax]} {destroy .tax ; return}
+    frame .tax -relief ridge -borderwidth 2
+    button .tax.auto -text "auto" -command {
+	set tmi [set XMIN ""] ; set tma [set XMAX ""] ; updateboth }
+    label .tax.l1 -text " t start: "
+    entry .tax.e1  -width 7 -relief sunken -bd 2 -textvariable tmi
+    bind  .tax.e1 <Return> { if {$tmi < $XMAX } {
+	set XMIN $tmi ; updateboth } else { set tmi $XMIN } }
+    label .tax.l2 -text "t end: "
+    entry .tax.e2  -width 7 -relief sunken -bd 2 -textvariable tma
+    bind  .tax.e2 <Return> { if {$tma > $XMIN } {
+	set XMAX $tma ; updateboth } else { set tma $XMAX } }
+    
+    label .tax.l3 -text "Units:"
+    radiobutton .tax.rb1 -text "s" -variable tmultiplier -value 1 \
+	-command updateboth
+    radiobutton .tax.rb2 -text "ms" -variable tmultiplier -value 1000 \
+	-command updateboth
+    radiobutton .tax.rb3 -text "us" -variable tmultiplier -value 1000000 \
+	-command updateboth
+
+    grid  .tax.auto .tax.l1 .tax.e1 .tax.l2 .tax.e2 \
+     .tax.l3 .tax.rb1 .tax.rb2 .tax.rb3 -sticky w
+    pack .tax
+    
+}
+
+proc yaxisbutton {} {
+    global YMIN YMAX
+    set ymi $YMIN ; set yma $YMAX
+    if {[winfo exists .yax]} {destroy .yax ; return}
+    frame .yax -relief ridge -borderwidth 2 
+    button .yax.auto -text "auto" -command {
+	set ymi [set YMIN ""] ; set yma [set YMAX ""] ; updateboth }
+    label .yax.l1 -text "y start: "
+    entry .yax.e1  -width 7 -relief sunken -bd 2 -textvariable ymi
+    bind  .yax.e1 <Return> { if {$ymi < $YMAX } {
+	set YMIN $ymi ; updateboth } else { set ymi $YMIN } }
+    label .yax.l2 -text "y end: "
+    entry .yax.e2  -width 7 -relief sunken -bd 2 -textvariable yma
+    bind  .yax.e2 <Return> { if {$yma > $YMIN } {
+	set YMAX $yma ; updateboth } else { set yma $YMAX } }
+    pack .yax.auto .yax.l1 .yax.e1 .yax.l2 .yax.e2 \
+	    -side left
+    pack .yax
+}
+
+
+# procedure for halt button
+proc haltbutton {} {
+    global RUNNING
+    set RUNNING 0
+}
+
+
+# procedure to loop during run - start button
+proc runproc {} {
+    global program RUNNING gain trigsrc maxchan NUMBEROFPOINTS SAMPLETIME
+    global TRIGGERDELAY TRIGGERHYST TRIGGERLEVEL triggerslope triggermode
+    global interpolmode continumode tmpfile
+    if {$RUNNING != 0} return
+    set RUNNING 1
+    set returnvalue 0
+    if {[winfo exist .axops.etxt]} {destroy .axops.etxt}
+
+    while {[expr ($RUNNING != 0) ]} {
+	set returnvalue [ catch { exec $program  \
+				      -n $NUMBEROFPOINTS -s $SAMPLETIME \
+				      -g $gain -t -c -m $maxchan \
+				      -T $triggermode -L $TRIGGERLEVEL \
+				      -P $triggerslope -C $trigsrc \
+				      -H $TRIGGERHYST -D $TRIGGERDELAY \
+				      -I $interpolmode \
+				      >$tmpfile \
+				  } evar ]
+	
+	if {$returnvalue == 0 } { ; # we can safely plot now
+	   updategraphics;
+	} else {
+	    set RUNNING 0
+	    label .axops.etxt -text "No data" -foreground red
+	    pack .axops.etxt -side left
+	}
+	if { $continumode == 0 } {
+	    set RUNNING 0
+	}
+       update
+   }
+}
+proc runbutton {} {
+    global continumode
+    set continumode 1
+    runproc
+}
+
+proc singlebutton {} {
+    global continumode
+    set continumode 0
+    runproc
+}
+
+# procedure save button
+proc savebutton {} {
+    global sd tmpfile
+    .mainknobs.start configure -state disabled
+
+    if {[winfo exists .fsel]} return
+    global fname COMMENT SAVED TIMEPERBIN BINNUM nru
+    if {[getfilename] == ""} {
+	.mainknobs.start configure -state normal
+	return
+    }
+    exec cat $tmpfile >$sd/$fname
+    set outfile [open $sd/$fname a+ ]
+    puts $outfile "# comment on this run: $COMMENT"
+    set g1 [ exec date ]
+    puts $outfile "# saved at $g1"
+    
+    close $outfile
+    set SAVED 1
+    .mainknobs.start configure -state normal
+
+}
+
+
+proc getfilename {} {
+    global fname COMMENT sd sdl
+    frame .fsel -relief ridge -borderwidth 2
+    frame .fsel.dir
+    frame .fsel.three
+    frame .fsel.one
+    frame .fsel.two
+    label .fsel.dir.t -text "current directory: "
+    entry .fsel.dir.e -relief sunken -width 20 -bd 2 -textvariable sdl
+    .fsel.dir.e xview moveto 1
+    bind .fsel.dir.e <Return> {
+	if {[file isdirectory $sdl]} {set sd $sdl } else {set sdl $sd}
+    }
+    label .fsel.one.t -text "Enter file name: "
+    entry .fsel.one.e -relief sunken -width 20 -bd 2 -textvariable fname
+    label .fsel.three.t -text "current comment: "
+    entry .fsel.three.e -relief sunken -width 20 -bd 2 -textvariable COMMENT
+    bind .fsel.one.e <Return> {
+	if {[file exists $fname]} {
+	    pack .fsel.two.w .fsel.two.t .fsel.two.b -side left	    
+	} else { destroy .fsel }
+    }
+    label .fsel.two.w -bitmap warning
+    label .fsel.two.t -text " File exists "
+    button .fsel.two.b -text "Overwrite" -command { destroy .fsel }
+    button .fsel.two.c -text "Cancel" -command { 
+	set fname "" ; destroy .fsel 
+	.mainknobs.start configure -state normal 
+    }
+    bind .fsel.two.c <Return> {.fsel.two.c invoke}
+    pack .fsel.dir.t .fsel.dir.e -side left
+    pack .fsel.two.c -side right
+    pack .fsel.one.t .fsel.one.e -side left
+    pack .fsel.three.t .fsel.three.e -side left
+    pack .fsel.dir .fsel.three .fsel.one .fsel.two
+    pack .fsel
+    tkwait window .fsel
+    return $fname
+}
+
+
+# printer button
+set LP "lp"
+proc printbutton {} {
+    global LP
+    if {[winfo exists .pri]} return
+    .mainknobs.start configure -state disabled
+
+    frame .pri -relief ridge -borderwidth 2
+    frame .pri.one ; frame .pri.two ; frame .pri.three
+    label .pri.one.t -text "PostScript printer: "
+    entry .pri.one.e -width 5 -relief sunken -bd 2 -textvariable LP
+    button .pri.one.b -text "Print" -command {
+	gnups $LP ; destroy .pri ; return
+    }
+    label .pri.two.t -text "eps file : "
+    entry .pri.two.e -width 5 -relief sunken -bd 2 -textvariable efna
+    button .pri.two.b -text "save to" -command {
+	gnueps $efna ; destroy .pri ; return 
+    }
+    button .pri.three.b -text "cancel" -command {
+	destroy .pri 
+	.mainknobs.start configure -state normal
+	return 
+    }
+    pack .pri.one.t .pri.one.e .pri.one.b -side left
+    pack .pri.two.t .pri.two.e .pri.two.b -side left
+    pack .pri.three.b -side left
+    pack .pri.one .pri.two .pri.three -side top
+    pack .pri
+}  
+
+# procedure exit button
+proc exitbutton {} {
+    global tmpfile gnucanvas gnucontrol
+    exec rm -f $tmpfile
+    exec rm -f $gnucanvas
+    exec rm -f $gnucontrol
+    exit
+}
+bind .mainknobs.exit <Return> exit
+
+
+
+# procedure to update paramters on canvas control file
+proc updatecontrolfile { } {
+    global gnucontrol XMIN XMAX YMIN YMAX tmpfile
+    global maxchan gridoptx gridopty tmultiplier
+    if { $gridoptx == 1 } {
+	exec echo "set grid x" >>$gnucontrol
+    }
+    if { $gridopty == 1 } {
+	exec echo "set grid y" >>$gnucontrol
+    }
+    set g2 "1"
+    if { $tmultiplier >1 } {
+	set g2 "(\$1*$tmultiplier)"
+    }
+
+    exec echo "set xrange \[$XMIN:$XMAX\]" >>$gnucontrol
+    exec echo "set yrange \[$YMIN:$YMAX\]" >>$gnucontrol
+    set gnustring "plot " ; set g1 "\'$tmpfile\'"
+    for { set i 2 } { $i <= ($maxchan+2) } {incr i } {
+	append gnustring "$g1 u $g2:$i w l notitle" ; set g1 " ,\'\'"
+    }
+    exec echo $gnustring >>$gnucontrol
+}
+
+# generate default control file
+proc gnugraphics {} {
+    global gnucontrol gnucanvas
+    exec echo "set terminal tkcanvas" >$gnucontrol
+    exec echo "set output \"$gnucanvas\" " >>$gnucontrol
+    updatecontrolfile
+}
+gnugraphics
+
+proc updategraphics { } {
+    global gnucanvas gnucontrol
+    catch {exec gnuplot $gnucontrol }
+    source $gnucanvas ; # load canvas source 
+    gnuplot .1
+    update
+}
+
+proc updateboth {} {
+    gnugraphics
+    updategraphics
+}
+
+proc gnups {printer} {
+    global gnucontrol tmpfile
+    exec echo "set terminal postscript color \"Helvetica\" 18 " >$gnucontrol
+    exec echo "set output \"|lpr -P$printer \" " >>$gnucontrol
+    updatecontrolfile
+    catch { exec gnuplot $gnucontrol }
+    # restore control file
+    gnugraphics
+}
+
+proc gnueps {file} {
+    global gnucontrol sd
+    exec echo "set terminal postscript eps color size 12cm,8cm \"Helvetica\" 14 " >$gnucontrol
+    exec echo "set output \"$sd/$file\"" >>$gnucontrol
+    updatecontrolfile
+    catch { exec gnuplot $gnucontrol }
+    # restore control file
+    gnugraphics
+}

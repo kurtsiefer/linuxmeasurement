@@ -1,3 +1,4 @@
+
 /* program to read in all eight differential input channels
    with the dt302 card. It is a simple implementation of the reasonably
    complex data acquisition scheme possible with the DT card.
@@ -9,10 +10,11 @@
 
    usage:
 
-   oscilloscope2 [-g gain] [-m maxchannel] [-n sets] [s time] [-t] [-c]
+   oscilloscope2 [-g gain] [-m maxchannel] [-n sets] [-s time] [-t] [-c]
                  [-T trigmode] [-L triglevel] [-P trigpolarity]
 		 [-C trigchannel] [-H trighysteresis]
 		 [-D trigdelay] [-I triginterpoloption]
+		 [-f boardname]
 
    options: -t output time as well (in seconds)
    
@@ -52,12 +54,18 @@ TRIGGER OPTIONS:
                          0: no trigger time interpolation
 			 1: interpolation within one sample cell
 			 2: interpolation within the set of points
+OTHER OPTIONS:
+    -f <boardname>    : Option to choose another input device, specified by
+                        a path to the device file. This is useful if there is
+			more than one card present. Default value is
+			"/dev/ioboards/dt302one" for historical reasons.
 
     If maxchannel is 2, the channel sampling takes place in the sequence
      0-1-2-0-1-2-0-1-2..... and the 0-1-2 sequence repeats <numofsets> times.
 
      history:
        first working version; tested with several triggers 30.8.09chk
+       fixed delayed trigger stuff, added -f option 7.9.09chk
 
      TODO:
      more testing...
@@ -127,6 +135,8 @@ void sighandler(int sig) {
 #define MAX_VOLTAGE 10.0
 #define MIN_VOLTAGE -10.0
 #define SLEEP_INTERVAL 50000 /* in microseconds, between reads */
+#define FILENAMELEN 200
+#define FILENAMEFMT "%199s"
 
 /* conversion factors for different cards */
 #define conversion_offset -10.0
@@ -183,13 +193,11 @@ int main(int argc, char *argv[]) {
   int triginterpoloption = DEFAULT_TRIGGERINTERPOLATION; /* 0: none,
 							    1: intra_cell
 							    2: complete */
-  /* open board */
-  fh=open(BOARDNAME,O_RDWR);
-  if (fh==-1) return -emsg(1);
+  char boardname[FILENAMELEN] = BOARDNAME; /* fill default board name */
   
   /* parse command line parameters */
   opterr=0; /* be quiet when there are no options */
-  while ((opt=getopt(argc, argv, "g:tm:s:n:T:D:L:H:P:C:I:c")) != EOF) {
+  while ((opt=getopt(argc, argv, "g:tm:s:n:T:D:L:H:P:C:I:cf:")) != EOF) {
       switch (opt) {
 	  case 'g': /* default gain */
 	      sscanf(optarg,"%d",&gain);
@@ -239,10 +247,18 @@ int main(int argc, char *argv[]) {
 	      if (triginterpoloption<0 || triginterpoloption>2)
 		  return -emsg(6);
 	      break; 
+          case 'f': /* other than default board */
+	      sscanf(optarg, FILENAMEFMT, boardname);
+	      boardname[FILENAMELEN-1]=0;
+	      break;
 	  default:
 	      break;
       };
   };
+
+  /* open board */
+  fh=open(boardname,O_RDWR);
+  if (fh==-1) return -emsg(1);
   
   /* just for convenience */
   totalchannels = maxchannel + 1;
@@ -264,6 +280,8 @@ int main(int argc, char *argv[]) {
   /* delay from trig to start-of-acq in samplesteps, truncated to first entry */
   trigdel = totalchannels * 
       (int)(TriggerDelay/samplingtime*1000000./totalchannels);
+  if (trigmode == 0) trigdel=0; /* for consistent buffer readout */
+
   if ((TriggerLevel > MAX_VOLTAGE) || (TriggerLevel < MIN_VOLTAGE))
       return -emsg(13);
   triglev1 = (int)((TriggerLevel-conversion_offset)/conversion);
@@ -315,7 +333,12 @@ int main(int argc, char *argv[]) {
   if (trigmode == 0) {
       trigidx = 0;
       trigstatus=TRIG_TRIGGERED; /* go into acquisition mode directly */
+  } else {
+    if (trigdel>0) {
+       trigstatus=TRIG_WAITING_FOR_ARM; /* skip preacq */
+    }
   }
+  
   /* fix autotrig */
   if (autotrigdelay<0) autotrigdelay = totalpoints;
 
@@ -336,17 +359,15 @@ int main(int argc, char *argv[]) {
       /* make decision of how many points we read in maximally */
       pts_to_get = totalpoints- goodpoints; /* start with as much as possible */
       if (pts_to_get > totalpoints - fillidx) 
-	  pts_to_get = totalpoints - fillidx; /* limit it to what fits in */
-
+        pts_to_get = totalpoints - fillidx; /* limit it to what fits in */
+    
       /* do the read */
       i0=read(fh, &data_buffer[fillidx], pts_to_get*2)/2;
 
       /* do processing of data to determine new trigger status */
       switch (trigstatus) {
-	  case TRIG_PREACQ: /*  check if sth happened */
-	      tmp = -trigdel ; /* necessary pretrig */
-	      if (tmp > totalpoints) tmp = totalpoints;
-	      tmp -= p_already; /* this is what we still need */
+          case TRIG_PREACQ: /*  check if sth happened */
+	      tmp = -trigdel - p_already; /* necessary pretrig */
 	      if (i0 < tmp ) break; /* need to wait more */
 
 	      /* prepare for next stage */
@@ -368,8 +389,9 @@ int main(int argc, char *argv[]) {
 		      if (data_buffer[i] <= triglev2) break;}
 
 	      /* check for no success */
-	      tmp = i-fillidx; 
+	      tmp = i-fillidx;
 	      if (tmp >= i0) break; /* no pre-trig found !!!check equal!! */
+
 	      /* prepare next stage */
 	      p_already += tmp;
 	      fillidx += tmp;
@@ -388,7 +410,7 @@ int main(int argc, char *argv[]) {
 		      if (data_buffer[i] >= triglev1) break;
 	      }
 	      /* check for no success */
-	      tmp = i-fillidx; 
+	      tmp = i-fillidx;
 	      if  (tmp >= i0) break; /* no trig found */
 	      /* prepare next stage */
 	      p_already += tmp;
@@ -401,7 +423,7 @@ int main(int argc, char *argv[]) {
 	      trigval_0 = data_buffer[i];
 	      trigval_1 = data_buffer[(i-totalchannels + totalpoints) % totalpoints];
 	      alarm(0);
-	  case TRIG_TRIGGERED:
+          case TRIG_TRIGGERED:
 	      /* how many good points do we have? */
 	      goodpoints = p_already + i0 - trigidx - trigdel;
 	      if (goodpoints < 0) { /* we are still in pretrig */
@@ -450,6 +472,7 @@ int main(int argc, char *argv[]) {
   switch (triginterpoloption) {
       case 2: dt0 -= (float)trigchan;
       case 1: /* within one sample */
+	if (trigval_0 != trigval_1) /* avoid problems with no trigger */ 
 	  dt0 += (((float)(triglev1-trigval_0)) / (float)(trigval_1-trigval_0)
 		  * (float)totalchannels);
   }
