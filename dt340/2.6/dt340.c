@@ -1,7 +1,7 @@
 /* dt340.c - version for kernel version 2.6
 
 
- Copyright (C) 2002-2009 Christian Kurtsiefer <christian.kurtsiefer@gmail.com>
+ Copyright (C) 2002-2011 Christian Kurtsiefer <christian.kurtsiefer@gmail.com>
 
  This source code is free software; you can redistribute it and/or
  modify it under the terms of the GNU Public License as published
@@ -121,6 +121,8 @@
     fixed problem with IRQ identification by moving pci_enable to a
       location before the irq line request  5.9.07chk
     updated SA_INTERRUPT and  SA_SHIRQ flags 17.4.09chk
+    changed ioctl to version without BKL to be compatible w kernels
+     >=2.6.26   22.6.01chk
 
     ToDo: remove card list cleanly, although I don't know how one could
     hotplug pci cards....
@@ -331,7 +333,8 @@ static int dt340_flat_close(struct inode *inode, struct file *filp) {
     if (cp) cp->iocard_opened = 0;
     return 0;
 }
-static int dt340_flat_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg) {
+/* changed to fit unlocked_ioctl structure */
+static int dt340_flat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int dir = _IOC_DIR(cmd);
     unsigned long adr = cmd & IOCTL_ADRMASK;
@@ -388,13 +391,13 @@ static int dt340_flat_ioctl(struct inode *inode, struct file *filp, unsigned int
 struct file_operations dt340_simple_fops = {
     open:    dt340_flat_open,
     release: dt340_flat_close,
-    ioctl:   dt340_flat_ioctl,
+    unlocked_ioctl:   dt340_flat_ioctl,
 };
 /* minor device 1 (simple access with IRQ ) file options */
 struct file_operations dt340_irq_fops = {
     open:    dt340_flat_open_irq,
     release: dt340_flat_close_irq,
-    ioctl:   dt340_flat_ioctl,
+    unlocked_ioctl:   dt340_flat_ioctl,
     fasync: dt340_fasync,
 };
 /* the open method dispatcher for the different minor devices */

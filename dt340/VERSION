@@ -1,4 +1,8 @@
-state of this document 10.8.2009
+state of this document 22.6.2011
+
+changed ioctl to match with kernels >= 2.6.36  22.6.11chk
+--
+state of the stuff below: 10.8.2009
 
 as of 10.8.2009: Fixed minor definitions in apps
 
