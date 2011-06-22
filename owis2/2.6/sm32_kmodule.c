@@ -78,6 +78,7 @@
    able to handle multiple cards (yet to be tested, works fine with one)
    loads/unloads cleanly.  7.11.2006 chk
    fixed include file to work on 2.6.27 kernel  11.8.2009chk
+   migrated ioctl to version without BKL 22.6.11chk
 
 */ 
 
@@ -128,7 +129,7 @@ static struct cardinfo *cif[NUMBER_OF_CARDS];
  * cmd=0x1000...0x101f: write register with value,
  * cmd=0x0..0x1f: return content of register
  */
-static int ioctl_flat(struct inode * inode, struct file * filp, unsigned int cmd, unsigned long value) {
+static int ioctl_flat(struct file * filp, unsigned int cmd, unsigned long value) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     unsigned char w,v;
     unsigned int ad = (cmd & IOCARD_SPACE);
@@ -178,7 +179,7 @@ static int flat_close(struct inode * inode, struct file * filp){
     return 0;
 };
 static struct file_operations flat_fops = {
-    ioctl:  ioctl_flat,	/* port_ioctl */
+    unlocked_ioctl:  ioctl_flat,	/* port_ioctl */
     open:   flat_open,	/* open code */
     release: flat_close,	/* release code */
 };
@@ -225,7 +226,7 @@ void write_virtual_long(struct cardinfo *cp, int vad,unsigned long value) {
 #define  cWFlag   1  /*if( Flags  &  cWFlag ) then command not processed yet*/
 #define  cRFlag   2  /*if( Flags  &  cRFlag ) then data not available yet   */
 
-static int ioctl_direct(struct inode * inode, struct file * filp, unsigned int cmd, unsigned long value) {
+static int ioctl_direct(struct file * filp, unsigned int cmd, unsigned long value) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int retval=0;
     int mot = (cmd & SM32_MOTOR_MASK)>>SM32_MOTOR_SHIFT;
@@ -271,7 +272,7 @@ static int close_direct(struct inode * inode, struct file * filp){
 };
 
 static struct file_operations direct_fops = {
-	ioctl:    ioctl_direct,	/* port_ioctl */
+	unlocked_ioctl:    ioctl_direct,	/* port_ioctl */
 	open:     open_direct,	/* open code */
 	release:  close_direct,	/* release code */
 };
