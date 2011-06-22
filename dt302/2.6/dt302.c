@@ -50,6 +50,7 @@
    changed dma buffer allocation to modern mode, fixed transferred
     values ioctl, fixed buffer re-arrange in old mode. fixed read
     code29.8.09chk
+    moved ioctl to unlocked_ioctl 22.6.11chk
 
    ToDo:
    - docu der min device 0 features steht noch aus.
@@ -158,7 +159,8 @@ static int dt302_flat_close(struct inode *inode, struct file *filp) {
     if (cp) cp->iocard_opened = 0;
     return 0;
 }
-static int dt302_flat_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg) {
+/* migrated to ioctl without the BKL */
+static int dt302_flat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int dir = _IOC_DIR(cmd);
     unsigned long adr = cmd & IOCTL_ADRMASK;
@@ -296,7 +298,8 @@ static ssize_t dt_302_advanced_read(struct file *filp,
     return transferred; /* bytes transferred */
 }
 
-static int dt302_advanced_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg) {
+/* migrated to new version without BKL */
+static int dt302_advanced_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int dir = _IOC_DIR(cmd);
     unsigned long tmp1,tmp2;
@@ -304,7 +307,7 @@ static int dt302_advanced_ioctl(struct inode *inode, struct file *filp, unsigned
     char * card = cp->cardspace;  /* shortend code..*/
 
     /* just for debug */
-    if (dir) return dt302_flat_ioctl(inode, filp, cmd, arg);
+    if (dir) return dt302_flat_ioctl(filp, cmd, arg);
 
     switch (cmd) {/* parse different ioctls */
 	case SET_DAC_0:case SET_DAC_1:
@@ -547,13 +550,13 @@ static int dt302_advanced_ioctl(struct inode *inode, struct file *filp, unsigned
 struct file_operations dt302_simple_fops = {
     open:    dt302_flat_open,
     release: dt302_flat_close,
-    ioctl:   dt302_flat_ioctl,
+    unlocked_ioctl:   dt302_flat_ioctl,
 };
 /* minor device 1 (advanced access) file options */
 struct file_operations dt302_advanced_fops = {
     open:    dt302_advanced_open,
     release: dt302_advanced_close,
-    ioctl:   dt302_advanced_ioctl,
+    unlocked_ioctl:   dt302_advanced_ioctl,
     read:    dt_302_advanced_read,
 };
 

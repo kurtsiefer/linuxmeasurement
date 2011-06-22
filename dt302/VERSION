@@ -1,5 +1,7 @@
-State of this document 29.8.2008
+State of this document 22.6.2011
 
+Edited such that it does not use old-style ioctl anymore; 22.6.11chk
+--
 Added osci_script; trigger delay bugfix in oscilloscope2.c 7.9.09chk
 
 A set of bugfixes in the driver and the applications. Tested on a 2.6.27
