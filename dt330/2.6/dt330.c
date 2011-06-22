@@ -1,7 +1,7 @@
 /* Driver for the data translation DT330 series cards. For the moment,
    only the DT335 digital io is supported. Description see further down
 
- Copyright (C) 2002-2009 Christian Kurtsiefer, National University
+ Copyright (C) 2002-2011 Christian Kurtsiefer, National University
                          of Singapore <christian.kurtsiefer@gmail.com>
 
  This source code is free software; you can redistribute it and/or
@@ -115,6 +115,7 @@
    transition to 2.6 kernel, needs to be tested. updated pci_enable
        location 5.9.07chk
    updated SA_INTERRUPT and  SA_SHIRQ flags.          10.8.09chk
+   updated ioctl to new unlocked version    22.6.11chk
 
 */
  
@@ -328,7 +329,7 @@ static int dt330_flat_close(struct inode *inode, struct file *filp) {
     if (cp) cp->iocard_opened = 0;
     return 0;
 }
-static int dt330_flat_ioctl(struct inode *inode, struct file *filp,
+static int dt330_flat_ioctl(struct file *filp,
 			    unsigned int cmd, unsigned long arg) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int dir = _IOC_DIR(cmd);
@@ -380,13 +381,13 @@ static int dt330_flat_ioctl(struct inode *inode, struct file *filp,
 struct file_operations dt330_simple_fops = {
     open:    dt330_flat_open,
     release: dt330_flat_close,
-    ioctl:   dt330_flat_ioctl,
+    unlocked_ioctl:   dt330_flat_ioctl,
 };
 /* minor device 1 (simple access with IRQ ) file options */
 struct file_operations dt330_irq_fops = {
     open:    dt330_flat_open_irq,
     release: dt330_flat_close_irq,
-    ioctl:   dt330_flat_ioctl,
+    unlocked_ioctl:   dt330_flat_ioctl,
     fasync: dt330_fasync,
 };
 /* the open method dispatcher for the different minor devices */
