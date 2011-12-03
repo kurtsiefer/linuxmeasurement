@@ -160,7 +160,7 @@ static int dt302_flat_close(struct inode *inode, struct file *filp) {
     return 0;
 }
 /* migrated to ioctl without the BKL */
-static int dt302_flat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
+static long dt302_flat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int dir = _IOC_DIR(cmd);
     unsigned long adr = cmd & IOCTL_ADRMASK;
@@ -299,7 +299,7 @@ static ssize_t dt_302_advanced_read(struct file *filp,
 }
 
 /* migrated to new version without BKL */
-static int dt302_advanced_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
+static long dt302_advanced_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int dir = _IOC_DIR(cmd);
     unsigned long tmp1,tmp2;
