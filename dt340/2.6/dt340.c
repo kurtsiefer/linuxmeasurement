@@ -334,7 +334,7 @@ static int dt340_flat_close(struct inode *inode, struct file *filp) {
     return 0;
 }
 /* changed to fit unlocked_ioctl structure */
-static int dt340_flat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
+static long dt340_flat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int dir = _IOC_DIR(cmd);
     unsigned long adr = cmd & IOCTL_ADRMASK;
@@ -447,7 +447,7 @@ struct file_operations dt340_fops = {
 };
 
 /* initialisation of the driver: getting resources etc. */
-static int __init dt340_init_one(struct pci_dev *dev, const struct pci_device_id *ent) {
+static int dt340_init_one(struct pci_dev *dev, const struct pci_device_id *ent) {
     struct cardinfo *cp; /* pointer to this card */
     int isref; /* int stuff reference pointer */
     
@@ -523,7 +523,7 @@ static struct cardinfo * find_card_from_membase(unsigned int mem_base0){
     return NULL;
 }
 
-static void __exit dt340_remove_one(struct pci_dev *pdev) {
+static void dt340_remove_one(struct pci_dev *pdev) {
     struct cardinfo *cp; /* to retreive card data */
     cp = find_card_from_membase(pci_resource_start(pdev, 0));
     if (!cp) {
@@ -539,7 +539,7 @@ static void __exit dt340_remove_one(struct pci_dev *pdev) {
 }
 
 /* driver description info for registration */
-static struct pci_device_id dt340_pci_tbl[]  __initdata = {
+static struct pci_device_id dt340_pci_tbl[] = {
     {PCI_VENDOR_ID_DATX, PCI_DEVICE_ID_DT340, PCI_ANY_ID, PCI_ANY_ID, 0,0,340},
     {0,0,0,0,0,0,0},
 };
