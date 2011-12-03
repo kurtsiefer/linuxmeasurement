@@ -129,7 +129,7 @@ static struct cardinfo *cif[NUMBER_OF_CARDS];
  * cmd=0x1000...0x101f: write register with value,
  * cmd=0x0..0x1f: return content of register
  */
-static int ioctl_flat(struct file * filp, unsigned int cmd, unsigned long value) {
+static long ioctl_flat(struct file * filp, unsigned int cmd, unsigned long value) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     unsigned char w,v;
     unsigned int ad = (cmd & IOCARD_SPACE);
@@ -226,7 +226,7 @@ void write_virtual_long(struct cardinfo *cp, int vad,unsigned long value) {
 #define  cWFlag   1  /*if( Flags  &  cWFlag ) then command not processed yet*/
 #define  cRFlag   2  /*if( Flags  &  cRFlag ) then data not available yet   */
 
-static int ioctl_direct(struct file * filp, unsigned int cmd, unsigned long value) {
+static long ioctl_direct(struct file * filp, unsigned int cmd, unsigned long value) {
     struct cardinfo *cp = (struct cardinfo *)filp->private_data;
     int retval=0;
     int mot = (cmd & SM32_MOTOR_MASK)>>SM32_MOTOR_SHIFT;
@@ -324,7 +324,7 @@ struct file_operations sm32_fops = {
 };
 
 /* initialisation of the driver: getting resources etc. */
-static int __init sm32_init_one(struct pci_dev *dev, const struct pci_device_id *ent) {
+static int sm32_init_one(struct pci_dev *dev, const struct pci_device_id *ent) {
     struct cardinfo *cp; /* pointer to this card */
 
     /* make sure there is enough card space */
@@ -381,7 +381,7 @@ static struct cardinfo * find_card_from_membase(unsigned int iocard_base){
     return NULL;
 }
 
-static void __exit sm32_remove_one(struct pci_dev *pdev) {
+static void sm32_remove_one(struct pci_dev *pdev) {
     struct cardinfo *cp; /* to retreive card data */
     cp = find_card_from_membase(pci_resource_start(pdev, 3));
     if (!cp) {
