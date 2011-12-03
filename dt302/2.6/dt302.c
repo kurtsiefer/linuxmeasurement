@@ -609,7 +609,7 @@ struct file_operations dt302_fops = {
 
 
 /* initialisation of the driver: getting resources etc. */
-static int __init dt302_init_one(struct pci_dev *dev, const struct pci_device_id *ent) {
+static int dt302_init_one(struct pci_dev *dev, const struct pci_device_id *ent) {
     
     struct cardinfo *cp; /* pointer to this card */
 
@@ -735,7 +735,7 @@ static struct cardinfo * find_card_from_membase(unsigned int mem_base0){
     return NULL;
 }
 
-static void __exit dt302_remove_one(struct pci_dev *pdev) {
+static void  dt302_remove_one(struct pci_dev *pdev) {
     struct cardinfo *cp; /* to retreive card data */
     cp = find_card_from_membase(pci_resource_start(pdev, 0));
     if (!cp) {
