@@ -907,7 +907,7 @@ static int dma_r_close(struct inode * inode, struct file * filp) {
 
 static int nu2err;
 static int adr2;
-static int dma_r_ioctl(struct inode * inode, struct file * file, unsigned int cmd, unsigned long value) {
+static long dma_r_ioctl(struct file * file, unsigned int cmd, unsigned long value) {
   char * tmp;
   struct dma_page_pointer * tmppnt;
   int ilocal;
@@ -1091,21 +1091,21 @@ static int dma_r_fasync(int fd, struct file *filp, int mode) {
 
 /* file operations for normal read/write device use */
 static struct file_operations dma_rw_fops = {
-    read:     dma_r_read,   /* read */
-    ioctl:    dma_r_ioctl,  /* port_ioctl */
-    mmap:     dma_r_mmap,   /* port_mmap */
-    open:     dma_r_open,   /* open code */
-    release:  dma_r_close   /* release code */
+    read:              dma_r_read,   /* read */
+    unlocked_ioctl:    dma_r_ioctl,  /* port_ioctl */
+    mmap:              dma_r_mmap,   /* port_mmap */
+    open:              dma_r_open,   /* open code */
+    release:           dma_r_close   /* release code */
 };
 
 /* file operations for dma read with the second timer for timeout */
 static struct file_operations special_dma_r_fops = {
-    read:     dma_r_read,   /* read */
-    ioctl:    dma_r_ioctl,  /* port_ioctl */
-    mmap:     dma_r_mmap,   /* port_mmap */
-    open:     dma_r_open,   /* open code */
-    release:  dma_r_close,   /* release code */
-    fasync:   dma_r_fasync  /* notification on irq */
+    read:              dma_r_read,   /* read */
+    unlocked_ioctl:    dma_r_ioctl,  /* port_ioctl */
+    mmap:              dma_r_mmap,   /* port_mmap */
+    open:              dma_r_open,   /* open code */
+    release:           dma_r_close,   /* release code */
+    fasync:            dma_r_fasync  /* notification on irq */
 };
 
 
@@ -1119,11 +1119,11 @@ static struct file_operations special_dma_r_fops = {
  * cmd=0x800..0x81f: return dma engine register content
  */
 
-static int ioctl_flat(struct inode * inode, struct file * file, unsigned int cmd, unsigned long value) {
+static long ioctl_flat(struct file * file, unsigned int cmd, unsigned long value) {
   unsigned short w2;
   unsigned int w4; 
   unsigned int ad = (cmd & IOCARD_SPACE);
-  unsigned int mindev = MINOR(inode->i_rdev);
+  unsigned int mindev = IOCARD_USAGE_MODE;
   unsigned int basead;
   
   
@@ -1165,12 +1165,9 @@ static int ioctl_flat(struct inode * inode, struct file * file, unsigned int cmd
 }
 
 static int flat_open(struct inode * inode, struct file * filp){
-  unsigned int mindev;
-
   if (IOCARD_IN_USE != 0)
     return -EBUSY;
-  mindev = MINOR(inode->i_rdev);
-
+  IOCARD_USAGE_MODE = MINOR(inode->i_rdev);
   IOCARD_IN_USE |= 1;
   return 0;
 };
@@ -1182,9 +1179,9 @@ static int flat_close(struct inode * inode, struct file * filp){
 };
 
 static struct file_operations flat_fops = {
-    ioctl:   ioctl_flat,	/* port_ioctl */
-    open:    flat_open,	        /* open code */
-    release: flat_close 	/* release code */
+    unlocked_ioctl:   ioctl_flat,	/* port_ioctl */
+    open:             flat_open,	        /* open code */
+    release:          flat_close 	/* release code */
 };
 
 
@@ -1313,7 +1310,7 @@ static void nudaq7200_remove_one(struct pci_dev *pdev) {
 }
 
 /* driver description info for registration */
-static struct pci_device_id nudaq7200_pci_tbl[] __initdata = {
+static struct pci_device_id nudaq7200_pci_tbl[] = {
     { PCI_VENDOR_ID_AMCC, PCI_DEVICE_ID_NUDAQ7200, PCI_ANY_ID, PCI_ANY_ID, 0,0,0},
     {0,0,0,0,0,0,0},
 };
