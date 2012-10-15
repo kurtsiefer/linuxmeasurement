@@ -40,6 +40,6 @@ clean:
 	$(MAKE) -C apps clean
 
 install: driver $(loadertarget)
-	cp $(loadertarget) /etc/init.d/
-	chmod 755 /etc/init.d/dt340loader
+	sudo cp $(loadertarget) /etc/init.d/
+	sudo chmod 755 /etc/init.d/dt340loader
 
