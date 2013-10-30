@@ -4,9 +4,11 @@
 # ToDo: - should allow to choose different install directories than
 #	  the source directories.
 #	- Should use a cleaner install routine (no OS-probing)
-#	- should packport multiple card feature to 2.4	
+#	- backport multiple card feature to 2.4	
 # 
-# current status: start rewriting 6.11.06 christian Kurtsiefer
+# current status:
+#         start rewriting 6.11.06 christian Kurtsiefer
+
 
 version=$(shell uname -r  |sed  "s/\([0-9].[0-9]\).*/\\1/")
 

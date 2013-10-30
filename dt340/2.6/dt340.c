@@ -286,7 +286,7 @@ static int dt340_flat_open_irq(struct inode *inode, struct file *filp) {
 
    /* get irq */
     retval=request_irq(cp->irq_number, dt340_int_handler, 
-		       IRQF_DISABLED | IRQF_SHARED,
+		       IRQF_SHARED,
 		       IOCARD_NAME, 
 		       cp); /* points to card stuff - correct context??? */
     if (retval) return retval; /* no success in getting irq */

@@ -50,3 +50,8 @@ Change history:
       addrows. 2.4.08chk
       - added digiout_dt340 as an example app to talk to the digital output
         lines 23.7.2009chk
+      - added link to 2.6 driver for higher versions at some point. Need to
+        make this more generic and remove the 2.6 restriction.
+      - removed the IRQF_DISABLED option in the IRQ request since it seems
+        to conflict with the IRQF_SHARED option, at least on a Debia distro
+
