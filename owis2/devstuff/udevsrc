@@ -1,0 +1,6 @@
+#set of udev rules to cope with a new device driver
+
+SUBSYSTEM=="pci", ACTION=="add", ENV{PCI_ID}=="9030:2337",
+RUN+="/sbin/modprobe sm32_kmodule", RUN+="DRIVERPATH/devstuff/makenodes.sh"
+
+
