@@ -29,8 +29,10 @@ all: driver $(loadertarget) apps
 driver:
 	$(MAKE) -C /lib/modules/`uname -r`/build M=$(sourcedir)
 
-$(loadertarget): $(loadersrc) $(loadersrc2)
+$(loadertarget): $(loadersrc)
 	cat $(loadersrc) | sed "s/DRIVERPATH/$(localdir)/g" >$(loadertarget)
+
+$(loadertarget2): $(loadersrc2)
 	cat $(loadersrc2) | sed "s/DRIVERPATH/$(localdir)/g" >$(loadertarget2)
 
 .PHONY: apps
@@ -48,9 +50,8 @@ clean:
 	$(MAKE) -C apps clean
 
 install: driver $(loadertarget) $(loadertarget2)
-        sudo $(MAKE) -C /lib/modules/`uname -r`/build M=$(sourcedir) modules_install
-#       sudo /sbin/depmod -a
+	sudo $(MAKE) -C /lib/modules/`uname -r`/build M=$(sourcedir) modules_install
+	sudo /sbin/depmod -a
 #       sudo cp $(loadertarget) /etc/init.d/
 #       sudo chmod 755 /etc/init.d/dt302loader
-        sudo cp $(loadertarget2) /etc/udev/rules.d/
-
+	sudo cp $(loadertarget2) /etc/udev/rules.d/
