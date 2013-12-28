@@ -141,7 +141,7 @@
 #include <linux/pci.h> 
 #include <asm/io.h>
 #include <asm/ioctl.h>
-#include <asm/system.h>
+// #include <asm/system.h>
 #include <linux/interrupt.h>
 
 /* Module parameters */
