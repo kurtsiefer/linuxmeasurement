@@ -7,6 +7,10 @@ dev1old="dt302one"
 # make ioboards directory
 mkdir -p /dev/ioboards
 
+# remove stale device files
+rm -f /dev/ioboards/dt340*
+rm -f /dev/dt340*
+
 major=$(awk "\$2~\"dt302\"  {print \$1}" /proc/devices)
 echo "dt302 driver claims following major devices:"
 echo $major
