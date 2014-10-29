@@ -1,6 +1,8 @@
 #set of udev rules to cope with a new device driver
 
-SUBSYSTEM=="pci", ACTION=="add", ENV{PCI_ID}=="1116:0041",
-RUN+="/sbin/modprobe dt302", RUN+="DRIVERPATH/devstuff/makenodes.sh"
+# This is for dt302
+SUBSYSTEM=="pci", ACTION=="add", ENV{PCI_ID}=="1116:0041", RUN+="/sbin/modprobe dt302", RUN+="DRIVERPATH/devstuff/makenodes.sh"
 
+# This is for dt322
+SUBSYSTEM=="pci", ACTION=="add", ENV{PCI_ID}=="1116:0051", RUN+="/sbin/modprobe dt302", RUN+="DRIVERPATH/devstuff/makenodes.sh"
 
