@@ -18,7 +18,7 @@ cardindex=0
 for elm in $major
   do echo "creating device ${dev1}_$cardindex for major $elm"
 # create  file entries
-  mknod /dev/${dev1}_${cardindex} c $elm 1
+  mknod /dev/${dev1}_${cardindex} c $elm 3
   chgrp users /dev/${dev1}_${cardindex}
   chmod 664 /dev/${dev1}_${cardindex}
   ln -s /dev/${dev1}_${cardindex} /dev/ioboards/
@@ -27,4 +27,7 @@ for elm in $major
 done
 
 # legacy link
-ln -s /dev/${dev1}_0 /dev/ioboards/${dev1old}
+if [ -a /dev/${dev1}_0]
+then
+    ln -s /dev/${dev1}_0 /dev/ioboards/${dev1old}
+fi
