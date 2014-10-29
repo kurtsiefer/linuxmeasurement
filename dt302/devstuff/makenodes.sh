@@ -8,8 +8,8 @@ dev1old="dt302one"
 mkdir -p /dev/ioboards
 
 # remove stale device files
-rm -f /dev/ioboards/dt340*
-rm -f /dev/dt340*
+rm -f /dev/ioboards/dt302*
+rm -f /dev/dt30x*
 
 major=$(awk "\$2~\"dt302\"  {print \$1}" /proc/devices)
 echo "dt302 driver claims following major devices:"
@@ -27,4 +27,7 @@ for elm in $major
 done
 
 # legacy link
-ln -s /dev/${dev1}_0 /dev/ioboards/${dev1old}
+if [ -a /dev/${dev1}_0]
+then
+    ln -s /dev/${dev1}_0 /dev/ioboards/${dev1old}
+fi
