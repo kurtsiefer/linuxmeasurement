@@ -33,13 +33,18 @@
 #include "sm32_2.h"
 #include <time.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
+
 /* #define DEBUG */
 /* default values and global variables */
 #define DEFAULT_VOLT 6.0
 #define DEFAULT_SPEED 200
 #define DEFAULT_MOVEMODE 0  /* 0: pos, 1: vel */
 
-#define DEVICE  "/dev/ioboards/stepper3"
+// #define SDEVICE  "/dev/ioboards/stepper3_0"
+#define SDEVICE  "/dev/stepper3_0"
 #define MAXINLEN 200
 int handle;
 float volts[3]={DEFAULT_VOLT,DEFAULT_VOLT,DEFAULT_VOLT};
@@ -318,7 +323,9 @@ int main(int argc, char * argv[]) {
   int idx, ir, cmo;
   int inh=0; /* stdin */
   /* open stepper motor device */
-  handle=open(DEVICE,O_RDWR);
+  handle=open(SDEVICE, O_RDWR);
+
+  printf("return value: %d\n",handle);
   if (handle==-1) return -emsg(1);
   
   do {
