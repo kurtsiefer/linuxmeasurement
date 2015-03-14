@@ -9,7 +9,7 @@ wd=$(PWD)
 all: $(targets) links
 
 stepmotor2: stepmotor2.c
-	gcc -lm -o stepmotor2 stepmotor2.c
+	gcc -Wall  -o stepmotor2 stepmotor2.c
 
 clean:
 	rm $(targets)

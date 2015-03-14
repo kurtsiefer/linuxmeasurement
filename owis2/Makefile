@@ -13,6 +13,7 @@
 # For legacy versions, there exists a 2.4 kernel directory. If you use this kernel,
 # set the sourcedir to 2.4, otherwise leave it at 2.6
 sourcedir=$(PWD)/2.6
+#sourcedir=/home/qitlab/programs/owis2/2.6
 
 # directory for the driver for the local OS version
 localdir=$(subst /,\/,$(PWD))

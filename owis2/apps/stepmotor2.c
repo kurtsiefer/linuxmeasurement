@@ -28,6 +28,7 @@
 */
 
 #include <fcntl.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include "sm32_2.h"
@@ -35,6 +36,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 
 
 /* #define DEBUG */
@@ -136,7 +138,7 @@ char * commands[]={
 
 int parse_command(char * cmd) { /* returns  0 on success, or error code */
   char cmdi2[MAXINLEN+1];
-  int idx, retval, converted,arg2;
+  int idx, retval, arg2;
   int motnum, steps, inspeed, limits;
   float involts;
   if (1!=sscanf(cmd,"%s",cmdi2)){
@@ -253,11 +255,10 @@ int parse_command(char * cmd) { /* returns  0 on success, or error code */
 		  inspeed=DEFAULT_SPEED;
 		  break;
 	      case 3:
-		  if (!movemode)
-		      if (inspeed<0.0 || inspeed >MAXSPEED) {
-			  retval = -emsg(6);break; };
-		  if (motnum<0 || motnum>2) {retval=-emsg(3);break;};
-		  break;
+		if (inspeed<0.0 || inspeed >MAXSPEED) {
+		  retval = -emsg(6);break; };
+		if (motnum<0 || motnum>2) {retval=-emsg(3);break;};
+		break;
 	      default:
 		  retval = -emsg(2);
 	  };
