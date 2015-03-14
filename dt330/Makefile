@@ -8,7 +8,7 @@
 # 
 # current status: start rewriting 6.11.06 christian Kurtsiefer
 
-version=$(shell uname -r  |sed  "s/\([0-9].[0-9]\).*/\\1/")
+version=$(shell uname -r  |sed  "s/\([0-9].[0-9]\).*/\\1/"| sed "s/3.*/2.6/")
 
 # directory for the driver for the local OS version
 localdir=$(subst /,\/,$(PWD))
