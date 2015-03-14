@@ -28,4 +28,7 @@ for elm in $major
 done
 
 # legacy link
-ln -s /dev/${dev1}_0 /dev/ioboards/${dev1old}
+if [ -a /dev/${dev1}_0 ]
+then
+    ln -s /dev/${dev1}_0 /dev/ioboards/${dev1old}
+fi
