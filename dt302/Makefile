@@ -15,7 +15,7 @@ loaderdir=devstuff
 loadersrc=$(loaderdir)/dt302.loadersource
 loadersrc2=$(loaderdir)/udevsrc
 loadertarget=$(loaderdir)/dt302loader
-loadertarget2=$(loaderdir)/60-dt302.rules
+loadertarget2=$(loaderdir)/59-dt302.rules
 
 all: driver loader apps
 

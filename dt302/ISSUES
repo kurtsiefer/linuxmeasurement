@@ -1,0 +1,4 @@
+The udev load mechanism seems to work not overly well. I saw the script
+failing to install device names depending on the naming of the rule file. Try
+to use a different number for loadertarget2 in the Makefile.
+14.3.2015chk

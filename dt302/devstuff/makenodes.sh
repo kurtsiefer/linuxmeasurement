@@ -3,6 +3,7 @@
 
 dev1="dt30x"
 dev1old="dt302one"
+# lgf="/home/chris/programs/dt302/mknode.log"
 
 # make ioboards directory
 mkdir -p /dev/ioboards
@@ -12,8 +13,9 @@ rm -f /dev/ioboards/dt302*
 rm -f /dev/dt30x*
 
 major=$(awk "\$2~\"dt302\"  {print \$1}" /proc/devices)
-echo "dt302 driver claims following major devices:"
-echo $major
+# date >>$lgf
+# echo "dt302 driver claims following major devices:" >>$lgf
+# echo $major >>$lgf
 cardindex=0 
 for elm in $major
   do echo "creating device ${dev1}_$cardindex for major $elm"
